@@ -315,6 +315,36 @@ textarea:focus-visible,
   .compass-debug-panel.hidden {
     display: none;
   }
+  
+  /* ==========================================
+     FULLSCREEN MODE STYLES
+     ========================================== */
+  
+  /* Hide elements in fullscreen mode */
+  body.fullscreen-mode #leftControls,
+  body.fullscreen-mode #rightControls,
+  body.fullscreen-mode .global-nav-container,
+  body.fullscreen-mode .sos-fab,
+  body.fullscreen-mode .feedback-fab,
+  body.fullscreen-mode #sosButton,
+  body.fullscreen-mode .compass-debug-panel,
+  body.fullscreen-mode #moreOptionsPanel {
+    display: none !important;
+  }
+  
+  /* Fullscreen toggle button - moves to bottom left in fullscreen mode */
+  body.fullscreen-mode #fullscreenToggleBtn {
+    top: auto !important;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0)) !important;
+    left: 20px !important;
+  }
+  
+  /* Ensure top controls remain visible in fullscreen */
+  body.fullscreen-mode #topControlBar,
+  body.fullscreen-mode #secondRowControls {
+    display: flex !important;
+  }
+  
   .debug-header {
     display: flex;
     justify-content: space-between;
@@ -921,6 +951,28 @@ textarea:focus-visible,
   </div>
 
   <!-- ============================================
+       FULLSCREEN TOGGLE BUTTON (Standalone - below left controls)
+       ============================================ -->
+  <button id="fullscreenToggleBtn" title="Toggle Fullscreen Mode" aria-label="Toggle fullscreen mode" style="
+    position: fixed;
+    left: 12px;
+    top: calc(50% + 140px);
+    width: 44px; height: 44px;
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #333;
+    border-radius: 50%;
+    color: white; font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 700;
+    transition: all 0.3s ease;
+  ">
+    <svg id="fullscreenIcon" width="22" height="22" viewBox="0 0 24 24" fill="white">
+      <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+    </svg>
+  </button>
+
+  <!-- ============================================
        RIGHT CONTROLS: Media + Safety + More
        ============================================ -->
   <div id="rightControls" style="
@@ -1025,7 +1077,7 @@ textarea:focus-visible,
     
     <div style="padding: 8px;">
       <div style="font-size: 11px; color: #888; padding: 4px 8px; margin-bottom: 4px;">VIEW</div>
-      <button id="fullscreenToggleBtn" onclick="toggleFullscreenMode()">⛶ Toggle Fullscreen</button>
+      <button id="fullscreenTogglePanelBtn" onclick="toggleFullscreenMode()">⛶ Toggle Fullscreen</button>
     </div>
     
     <div style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -1819,77 +1871,49 @@ textarea:focus-visible,
   function toggleFullscreenMode() {
     isFullscreen = !isFullscreen;
     
-    const topControlBar = document.getElementById('topControlBar');
-    const headingRow = document.getElementById('headingRow');
-    const leftControls = document.getElementById('leftControls');
-    const rightControls = document.getElementById('rightControls');
-    const bottomNav = document.getElementById('globalBottomNav');
+    const body = document.body;
     const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
+    const fullscreenPanelBtn = document.getElementById('fullscreenTogglePanelBtn');
+    const fullscreenIcon = document.getElementById('fullscreenIcon');
     
-    // Get or create exit fullscreen button
-    let exitBtn = document.getElementById('exitFullscreenBtn');
+    // Remove old exit button if exists
+    const oldExitBtn = document.getElementById('exitFullscreenBtn');
+    if (oldExitBtn) oldExitBtn.remove();
     
     if (isFullscreen) {
-      // Enter fullscreen - hide all UI except map
-      topControlBar?.style.setProperty('display', 'none', 'important');
-      headingRow?.style.setProperty('display', 'none', 'important');
-      leftControls?.style.setProperty('display', 'none', 'important');
-      rightControls?.style.setProperty('display', 'none', 'important');
-      bottomNav?.classList.add('hidden');
+      // Enter fullscreen mode - use CSS class
+      body.classList.add('fullscreen-mode');
       
-      if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Exit Fullscreen';
+      // Update panel button text
+      if (fullscreenPanelBtn) fullscreenPanelBtn.textContent = '⛶ Exit Fullscreen';
       
-      // Create exit button if doesn't exist
-      if (!exitBtn) {
-        exitBtn = document.createElement('button');
-        exitBtn.id = 'exitFullscreenBtn';
-        exitBtn.innerHTML = '⛶';
-        exitBtn.title = 'Exit Fullscreen';
-        exitBtn.setAttribute('aria-label', 'Exit fullscreen mode');
-        exitBtn.style.cssText = `
-          position: fixed;
-          top: 60px;
-          right: 10px;
-          width: 40px;
-          height: 40px;
-          background: rgba(26, 26, 26, 0.8);
-          border: 1px solid #444;
-          border-radius: 50%;
-          color: white;
-          font-size: 18px;
-          cursor: pointer;
-          z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0.6;
-          transition: opacity 0.2s;
-        `;
-        exitBtn.addEventListener('mouseenter', () => exitBtn.style.opacity = '1');
-        exitBtn.addEventListener('mouseleave', () => exitBtn.style.opacity = '0.6');
-        exitBtn.addEventListener('click', toggleFullscreenMode);
-        document.body.appendChild(exitBtn);
+      // Update floating button icon to "exit fullscreen" (arrows pointing inward)
+      if (fullscreenIcon) {
+        fullscreenIcon.innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
       }
-      exitBtn.style.display = 'flex';
       
       // Show a brief toast
-      window.toast?.show('Fullscreen mode');
+      window.toast?.show('Fullscreen mode - Tap button to exit');
       
-      // Close the options panel
-      togglePanel('moreOptionsPanel');
+      // Close the options panel if open
+      const moreOptionsPanel = document.getElementById('moreOptionsPanel');
+      if (moreOptionsPanel && !moreOptionsPanel.classList.contains('hidden')) {
+        togglePanel('moreOptionsPanel');
+      }
       
     } else {
-      // Exit fullscreen - show all UI
-      topControlBar?.style.removeProperty('display');
-      headingRow?.style.removeProperty('display');
-      leftControls?.style.removeProperty('display');
-      rightControls?.style.removeProperty('display');
-      bottomNav?.classList.remove('hidden');
+      // Exit fullscreen mode - remove CSS class
+      body.classList.remove('fullscreen-mode');
       
-      if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Toggle Fullscreen';
+      // Update panel button text
+      if (fullscreenPanelBtn) fullscreenPanelBtn.textContent = '⛶ Toggle Fullscreen';
       
-      // Hide exit button
-      if (exitBtn) exitBtn.style.display = 'none';
+      // Update floating button icon to "enter fullscreen" (arrows pointing outward)
+      if (fullscreenIcon) {
+        fullscreenIcon.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+      }
+      
+      window.toast?.show('Exited fullscreen mode');
     }
     
     // Dispatch event for other components
@@ -1899,6 +1923,9 @@ textarea:focus-visible,
     
     console.log('[TrackerUI] Fullscreen mode:', isFullscreen);
   }
+  
+  // Attach click handler to the floating fullscreen button
+  document.getElementById('fullscreenToggleBtn')?.addEventListener('click', toggleFullscreenMode);
   
   // Make function globally available
   window.toggleFullscreenMode = toggleFullscreenMode;
