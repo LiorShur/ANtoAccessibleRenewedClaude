@@ -228,6 +228,18 @@ textarea:focus-visible,
   .floating-left { top: 500px !important; }
   .floating-right { top: 475px !important; }
   
+  /* High contrast mode for elevation display */
+  html.high-contrast #elevationDisplay {
+    background: white !important;
+    border: 2px solid black;
+  }
+  html.high-contrast #elevationDisplay svg {
+    fill: black !important;
+  }
+  html.high-contrast #elevationValue {
+    color: black !important;
+  }
+  
   /* Hide old auth bar */
   .auth-status-bar { display: none !important; }
   
@@ -788,6 +800,22 @@ textarea:focus-visible,
       <span id="headingValue" style="font-size: 16px; font-weight: 700; color: white; min-width: 42px; text-align: right;">---°</span>
     </div>
     
+    <!-- Elevation Display -->
+    <div id="elevationDisplay" style="
+      background: rgba(26, 26, 26, 0.95);
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    ">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#4CAF50">
+        <path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/>
+      </svg>
+      <span id="elevationValue" style="font-size: 14px; font-weight: 600; color: white; min-width: 50px;">---m</span>
+    </div>
+    
     <!-- Accessibility Survey Button (blue round) -->
     <button id="accessibilitySurveyBtn" onclick="openAccessibilityForm()" title="Accessibility Survey" aria-label="Open accessibility survey" style="
       width: 36px; height: 36px;
@@ -1038,7 +1066,7 @@ textarea:focus-visible,
   <button id="fullscreenToggleBtn" title="Toggle Fullscreen Mode" aria-label="Toggle fullscreen mode" style="
     position: fixed;
     left: 12px;
-    top: calc(50% + 140px);
+    top: calc(50% + 195px);
     width: 44px; height: 44px;
     background: rgba(26, 26, 26, 0.95);
     border: 1px solid #333;
@@ -2098,6 +2126,77 @@ textarea:focus-visible,
       updateHCButtonState();
       try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
     });
+  })();
+  
+  // ===== REAL-TIME ELEVATION DISPLAY =====
+  (function() {
+    const elevationValue = document.getElementById('elevationValue');
+    const elevationDisplay = document.getElementById('elevationDisplay');
+    
+    if (!elevationValue || !elevationDisplay) return;
+    
+    let lastElevation = null;
+    let elevationTrend = null; // 'up', 'down', or 'flat'
+    
+    // Listen for elevation updates
+    window.addEventListener('elevationUpdate', (e) => {
+      const { elevation, source } = e.detail;
+      
+      if (elevation === null || elevation === undefined) return;
+      
+      // Calculate trend
+      if (lastElevation !== null) {
+        const diff = elevation - lastElevation;
+        if (diff > 1) {
+          elevationTrend = 'up';
+        } else if (diff < -1) {
+          elevationTrend = 'down';
+        } else {
+          elevationTrend = 'flat';
+        }
+      }
+      
+      lastElevation = elevation;
+      
+      // Update display
+      const roundedElev = Math.round(elevation);
+      elevationValue.textContent = `${roundedElev}m`;
+      
+      // Update icon color based on source
+      const svgIcon = elevationDisplay.querySelector('svg');
+      if (svgIcon) {
+        // Green for device, blue for API
+        svgIcon.style.fill = source === 'device' ? '#4CAF50' : '#2196F3';
+      }
+      
+      // Add trend indicator
+      let trendIcon = '';
+      if (elevationTrend === 'up') {
+        trendIcon = '↑';
+        elevationValue.style.color = '#4CAF50';
+      } else if (elevationTrend === 'down') {
+        trendIcon = '↓';
+        elevationValue.style.color = '#f44336';
+      } else {
+        trendIcon = '';
+        elevationValue.style.color = 'white';
+      }
+      
+      elevationValue.textContent = `${trendIcon}${roundedElev}m`;
+    });
+    
+    // Reset elevation display when tracking stops
+    window.addEventListener('trackingStopped', () => {
+      elevationValue.textContent = '---m';
+      elevationValue.style.color = 'white';
+      lastElevation = null;
+      elevationTrend = null;
+      
+      const svgIcon = elevationDisplay.querySelector('svg');
+      if (svgIcon) svgIcon.style.fill = '#4CAF50';
+    });
+    
+    console.log('[TrackerUI] Elevation display initialized');
   })();
 </script>
 </body>
