@@ -477,11 +477,43 @@ async saveRoute() {
     // Clean up the name
     routeName = routeName.trim() || defaultName;
 
-    // Save to local storage first
+    // CRITICAL: Capture all route data BEFORE any async operations that might clear it
+    const routeData = [...this.appState.getRouteData()]; // Make a copy
+    const routeInfo = {
+      name: routeName,
+      totalDistance: this.appState.getTotalDistance(),
+      elapsedTime: this.appState.getElapsedTime(),
+      date: new Date().toISOString()
+    };
+    
+    // Get accessibility data
+    let accessibilityData = null;
+    try {
+      const storedAccessibilityData = localStorage.getItem('accessibilityData');
+      accessibilityData = storedAccessibilityData ? JSON.parse(storedAccessibilityData) : null;
+    } catch (error) {
+      console.warn('Could not load accessibility data:', error);
+    }
+
+    // Save to local storage first (for route history)
     const savedSession = await this.appState.saveSession(routeName);
     
-    // Show success message for local save
-    toast.success(`"${routeName}" saved locally!`);
+    // ALSO save to offlineSync's pending system for cloud sync later
+    // This ensures the route appears in "Local Storage" modal and can be uploaded
+    const pendingData = {
+      routeData: routeData,
+      routeInfo: routeInfo,
+      accessibilityData: accessibilityData,
+      name: routeName,
+      totalDistance: routeInfo.totalDistance,
+      elapsedTime: routeInfo.elapsedTime
+    };
+    
+    // Import and use offlineSync
+    const { offlineSync } = await import('../features/offlineSync.js');
+    await offlineSync.saveRoute(pendingData, null); // Save without user - will be linked on upload
+    
+    console.log('✅ Route saved to both local storage and pending queue');
     
     // Check if user is logged in and offer cloud save
     const app = window.AccessNatureApp;
@@ -493,37 +525,39 @@ async saveRoute() {
       
       if (cloudChoice && cloudChoice !== 'skip') {
         try {
-          // Get the current route data before clearing it
-          const routeData = this.appState.getRouteData();
-          const routeInfo = {
-            name: routeName,
-            totalDistance: this.appState.getTotalDistance(),
-            elapsedTime: this.appState.getElapsedTime(),
-            date: new Date().toISOString(),
-            makePublic: cloudChoice === 'public' // Add this flag
-          };
-          
-          // Get accessibility data
-          let accessibilityData = null;
-          try {
-            const storedAccessibilityData = localStorage.getItem('accessibilityData');
-            accessibilityData = storedAccessibilityData ? JSON.parse(storedAccessibilityData) : null;
-          } catch (error) {
-            console.warn('Could not load accessibility data:', error);
-          }
+          routeInfo.makePublic = cloudChoice === 'public';
           
           // Save to cloud directly
           await this.saveRouteToCloud(routeData, routeInfo, accessibilityData, authController);
           
+          // Mark as uploaded in pending queue
+          const pendingRoutes = await offlineSync.getPendingRoutes();
+          const justSaved = pendingRoutes.find(r => r.data?.name === routeName && r.status === 'pending');
+          if (justSaved) {
+            await offlineSync.markRouteUploaded(justSaved.localId, 'cloud-synced');
+          }
+          
         } catch (cloudError) {
           console.error('❌ Cloud save failed:', cloudError);
-          toast.warning('Local save successful, but cloud save failed. You can upload it later from Routes panel.', { duration: 6000 });
+          toast.warning('Saved locally! Cloud upload failed - you can retry from Local Storage.', { duration: 6000 });
         }
       }
     } else {
-      // User not logged in
-      const wantsToSignIn = await modal.confirm('Sign in to save routes to the cloud and create shareable trail guides.\n\nWould you like to sign in now?', '💡 Enable Cloud Sync');
+      // User not logged in - route is already saved locally and to pending queue
+      toast.success(`"${routeName}" saved locally!`);
+      
+      const wantsToSignIn = await modal.confirm(
+        'Sign in to save routes to the cloud and create shareable trail guides.\n\nYour route is saved locally and will be available to upload after signing in.',
+        '💡 Enable Cloud Sync'
+      );
+      
       if (wantsToSignIn && authController?.showAuthModal) {
+        // Store the pending route info so we can prompt after auth
+        sessionStorage.setItem('pendingCloudUpload', JSON.stringify({
+          routeName: routeName,
+          timestamp: Date.now()
+        }));
+        
         authController.showAuthModal();
       }
     }
@@ -651,6 +685,11 @@ async generateTrailGuide(routeId, routeData, routeInfo, accessibilityData, authC
 // NEW: Save route to cloud (separate method)
 async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) {
   try {
+    // Check network connectivity first
+    if (!navigator.onLine) {
+      throw new Error('No internet connection. Route saved locally and will sync when online.');
+    }
+    
     console.log('☁️ Saving route to cloud...');
     
     // Import Firestore functions
@@ -697,8 +736,13 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
       }
     };
 
-    // Save route to cloud
-    const docRef = await addDoc(collection(db, 'routes'), routeDoc);
+    // Save route to cloud with timeout
+    const savePromise = addDoc(collection(db, 'routes'), routeDoc);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Cloud save timed out')), 30000)
+    );
+    
+    const docRef = await Promise.race([savePromise, timeoutPromise]);
     console.log('✅ Route saved to cloud with ID:', docRef.id);
     
     // Generate trail guide HTML
@@ -706,8 +750,22 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
     
     this.showSuccessMessage(`✅ "${routeInfo.name}" saved to cloud with trail guide! ☁️`);
     
+    return docRef.id;
+    
   } catch (error) {
     console.error('❌ Cloud save failed:', error);
+    
+    // Check if it's a network-related error
+    const isNetworkError = !navigator.onLine || 
+      error.message.includes('network') || 
+      error.message.includes('timeout') ||
+      error.message.includes('Failed to fetch') ||
+      error.code === 'unavailable';
+    
+    if (isNetworkError) {
+      toast.warning('Network error - route saved locally. Will sync when online.', { duration: 5000 });
+    }
+    
     throw error;
   }
 }
