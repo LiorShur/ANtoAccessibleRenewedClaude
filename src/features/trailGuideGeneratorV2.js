@@ -338,27 +338,22 @@ export class TrailGuideGeneratorV2 {
     };
   }
 
-  formatDuration(timeValue) {
-    if (!timeValue) return '--';
+  formatDuration(milliseconds) {
+    if (!milliseconds) return '--';
     
-    // Detect if value is in milliseconds (> 100000 means likely ms, not seconds)
-    // A route longer than ~28 hours in seconds would be 100000, which is very rare
-    // But 100000ms is only ~1.6 minutes, so we can safely assume large values are ms
-    let seconds;
-    if (timeValue > 86400) {
-      // Likely milliseconds - convert to seconds
-      seconds = Math.floor(timeValue / 1000);
-    } else {
-      seconds = Math.floor(timeValue);
-    }
-    
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    // Timer always stores elapsed time in milliseconds
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
     
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
     }
-    return `${minutes}m`;
   }
 
   getDifficultyEmoji(data) {
