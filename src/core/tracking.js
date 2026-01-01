@@ -4,6 +4,7 @@ import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { userService } from '../services/userService.js';
 import { trailGuideGeneratorV2 } from '../features/trailGuideGeneratorV2.js';
+import { getElevation } from '../utils/geolocation.js';
 
 export class TrackingController {
   constructor(appState) {
@@ -12,6 +13,9 @@ export class TrackingController {
     this.isTracking = false;
     this.isPaused = false;
     this.dependencies = {};
+    this.lastElevationFetch = 0;
+    this.elevationFetchInterval = 10000; // Fetch from API max every 10 seconds
+    this.lastApiElevation = null;
   }
 
   setDependencies(deps) {
@@ -212,7 +216,7 @@ async stop() {
   handlePositionUpdate(position) {
     if (!this.isTracking || this.isPaused) return;
 
-    const { latitude, longitude, accuracy } = position.coords;
+    const { latitude, longitude, accuracy, altitude, altitudeAccuracy } = position.coords;
     
     // Filter out inaccurate readings
     if (accuracy > 100) {
@@ -241,13 +245,33 @@ async stop() {
       }
     }
 
-    // Add GPS point to route data
-    this.appState.addRoutePoint({
+    // Add GPS point to route data (including elevation if available)
+    const routePoint = {
       type: 'location',
       coords: currentCoords,
       timestamp: Date.now(),
       accuracy: accuracy
-    });
+    };
+    
+    // Check for device altitude first
+    const hasDeviceAltitude = altitude !== null && altitude !== undefined && !isNaN(altitude);
+    
+    if (hasDeviceAltitude) {
+      // Use device GPS/barometer altitude
+      routePoint.elevation = altitude;
+      routePoint.elevationAccuracy = altitudeAccuracy || null;
+      routePoint.elevationSource = 'device';
+      this.lastApiElevation = null; // Reset API cache when device has altitude
+      
+      // Dispatch elevation update immediately
+      this.dispatchElevationUpdate(altitude, 'device');
+    } else {
+      // Try API fallback (throttled)
+      this.fetchElevationFromAPI(latitude, longitude, routePoint);
+    }
+    
+    // Add the route point to state
+    this.appState.addRoutePoint(routePoint);
 
     this.appState.addPathPoint(currentCoords);
 
@@ -258,10 +282,69 @@ async stop() {
 
     // Dispatch position update event for trail alerts and other modules
     window.dispatchEvent(new CustomEvent('positionUpdate', {
-      detail: { lat: latitude, lng: longitude, accuracy }
+      detail: { 
+        lat: latitude, 
+        lng: longitude, 
+        accuracy,
+        elevation: routePoint.elevation || null
+      }
     }));
 
-    console.log(`📍 GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${accuracy.toFixed(1)}m)`);
+    // Log with elevation if available
+    const elevStr = routePoint.elevation ? ` 📐${routePoint.elevation.toFixed(1)}m` : '';
+    console.log(`📍 GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${accuracy.toFixed(1)}m)${elevStr}`);
+  }
+
+  /**
+   * Fetch elevation from API with throttling
+   */
+  async fetchElevationFromAPI(lat, lng, routePoint) {
+    const now = Date.now();
+    
+    // Throttle API calls
+    if (now - this.lastElevationFetch < this.elevationFetchInterval) {
+      // Use cached API elevation if available
+      if (this.lastApiElevation !== null) {
+        routePoint.elevation = this.lastApiElevation;
+        routePoint.elevationSource = 'api-cached';
+        this.dispatchElevationUpdate(this.lastApiElevation, 'api');
+      }
+      return;
+    }
+    
+    this.lastElevationFetch = now;
+    
+    try {
+      const elevation = await getElevation(lat, lng);
+      
+      if (elevation !== null) {
+        routePoint.elevation = elevation;
+        routePoint.elevationSource = 'api';
+        this.lastApiElevation = elevation;
+        
+        // Update the route point in state (it was already added, so update last point)
+        const routeData = this.appState.getRouteData();
+        const lastPoint = routeData[routeData.length - 1];
+        if (lastPoint && lastPoint.coords.lat === lat && lastPoint.coords.lng === lng) {
+          lastPoint.elevation = elevation;
+          lastPoint.elevationSource = 'api';
+        }
+        
+        this.dispatchElevationUpdate(elevation, 'api');
+        console.log(`📐 API Elevation: ${elevation.toFixed(1)}m`);
+      }
+    } catch (error) {
+      console.warn('Elevation API fallback failed:', error);
+    }
+  }
+
+  /**
+   * Dispatch elevation update event for UI
+   */
+  dispatchElevationUpdate(elevation, source) {
+    window.dispatchEvent(new CustomEvent('elevationUpdate', {
+      detail: { elevation, source }
+    }));
   }
 
   handlePositionError(error) {
