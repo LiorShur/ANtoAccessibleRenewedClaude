@@ -158,6 +158,9 @@ export class TrailGuideGeneratorV2 {
             </div>
         </div>
 
+        <!-- Elevation Profile -->
+        ${this.renderElevationSection(routeData)}
+
         <!-- Good For Section -->
         ${this.renderGoodForSection(accessibilityData)}
 
@@ -398,6 +401,309 @@ export class TrailGuideGeneratorV2 {
     if (surfaceStr.includes('Grass')) return 'Grass';
     if (surfaceStr.includes('Mixed')) return 'Mixed';
     return surfaceStr.split(' ')[0];
+  }
+
+  /**
+   * Render elevation profile section
+   */
+  renderElevationSection(routeData) {
+    // Extract location points with elevation data
+    const locationPoints = routeData.filter(p => 
+      p.type === 'location' && 
+      p.coords && 
+      p.elevation !== undefined && 
+      p.elevation !== null &&
+      !isNaN(p.elevation)
+    );
+
+    // Need at least 2 points for a chart
+    if (locationPoints.length < 2) {
+      return ''; // Don't show section if no elevation data
+    }
+
+    // Calculate cumulative distance and build elevation data
+    let cumulativeDistance = 0;
+    const elevationData = [];
+    
+    for (let i = 0; i < locationPoints.length; i++) {
+      const point = locationPoints[i];
+      
+      if (i > 0) {
+        const prevPoint = locationPoints[i - 1];
+        const distance = this.haversineDistance(
+          prevPoint.coords.lat, prevPoint.coords.lng,
+          point.coords.lat, point.coords.lng
+        );
+        cumulativeDistance += distance;
+      }
+
+      elevationData.push({
+        distance: cumulativeDistance,
+        elevation: point.elevation
+      });
+    }
+
+    // Calculate stats
+    const elevations = elevationData.map(p => p.elevation);
+    const minElevation = Math.min(...elevations);
+    const maxElevation = Math.max(...elevations);
+    
+    // Calculate total ascent and descent
+    let totalAscent = 0;
+    let totalDescent = 0;
+    
+    for (let i = 1; i < elevationData.length; i++) {
+      const diff = elevationData[i].elevation - elevationData[i - 1].elevation;
+      if (diff > 0) {
+        totalAscent += diff;
+      } else {
+        totalDescent += Math.abs(diff);
+      }
+    }
+
+    // Calculate gradients for coloring
+    const segments = [];
+    for (let i = 1; i < elevationData.length; i++) {
+      const prev = elevationData[i - 1];
+      const curr = elevationData[i];
+      const horizontalDistance = (curr.distance - prev.distance) * 1000;
+      const elevationChange = curr.elevation - prev.elevation;
+      const gradient = horizontalDistance > 0 ? (elevationChange / horizontalDistance) * 100 : 0;
+      
+      segments.push({
+        startDistance: prev.distance,
+        endDistance: curr.distance,
+        startElevation: prev.elevation,
+        endElevation: curr.elevation,
+        gradient: gradient,
+        category: this.getGradientCategory(Math.abs(gradient))
+      });
+    }
+
+    // Analyze steep sections
+    const steepAnalysis = this.analyzeSteepSections(segments);
+
+    // Generate SVG chart
+    const chartSvg = this.generateElevationSvg(elevationData, segments, 600, 180);
+
+    return `
+        <section class="tg-section tg-elevation">
+            <h2 class="tg-section-title">📈 Elevation Profile</h2>
+            
+            <!-- Elevation Stats -->
+            <div class="tg-elevation-stats">
+                <div class="tg-elev-stat">
+                    <span class="tg-elev-icon" style="color: #4CAF50;">↑</span>
+                    <span class="tg-elev-value">${Math.round(totalAscent)}m</span>
+                    <span class="tg-elev-label">Ascent</span>
+                </div>
+                <div class="tg-elev-stat">
+                    <span class="tg-elev-icon" style="color: #f44336;">↓</span>
+                    <span class="tg-elev-value">${Math.round(totalDescent)}m</span>
+                    <span class="tg-elev-label">Descent</span>
+                </div>
+                <div class="tg-elev-stat">
+                    <span class="tg-elev-icon" style="color: #2196F3;">▽</span>
+                    <span class="tg-elev-value">${Math.round(minElevation)}m</span>
+                    <span class="tg-elev-label">Min</span>
+                </div>
+                <div class="tg-elev-stat">
+                    <span class="tg-elev-icon" style="color: #FF9800;">△</span>
+                    <span class="tg-elev-value">${Math.round(maxElevation)}m</span>
+                    <span class="tg-elev-label">Max</span>
+                </div>
+            </div>
+            
+            <!-- Elevation Chart -->
+            <div class="tg-elevation-chart">
+                ${chartSvg}
+            </div>
+            
+            <!-- Gradient Legend -->
+            <div class="tg-gradient-legend">
+                <span class="tg-legend-item"><span class="tg-legend-color" style="background: #4CAF50;"></span> 0-5% Flat</span>
+                <span class="tg-legend-item"><span class="tg-legend-color" style="background: #FFC107;"></span> 5-10% Moderate</span>
+                <span class="tg-legend-item"><span class="tg-legend-color" style="background: #FF9800;"></span> 10-15% Steep</span>
+                <span class="tg-legend-item"><span class="tg-legend-color" style="background: #f44336;"></span> >15% Very Steep</span>
+            </div>
+            
+            ${steepAnalysis.hasSteepSections ? `
+            <!-- Steep Sections Warning -->
+            <div class="tg-steep-warning">
+                <div class="tg-steep-header">
+                    <span class="tg-steep-icon">⚠️</span>
+                    <span class="tg-steep-title">Steep Sections (${steepAnalysis.count})</span>
+                </div>
+                <div class="tg-steep-details">
+                    ${steepAnalysis.details}
+                </div>
+            </div>
+            ` : ''}
+        </section>
+    `;
+  }
+
+  /**
+   * Get gradient category based on percentage
+   */
+  getGradientCategory(gradientPercent) {
+    if (gradientPercent <= 5) return 'flat';
+    if (gradientPercent <= 10) return 'moderate';
+    if (gradientPercent <= 15) return 'steep';
+    return 'verysteep';
+  }
+
+  /**
+   * Get color for gradient category
+   */
+  getGradientColor(category) {
+    const colors = {
+      flat: '#4CAF50',
+      moderate: '#FFC107',
+      steep: '#FF9800',
+      verysteep: '#f44336'
+    };
+    return colors[category] || colors.flat;
+  }
+
+  /**
+   * Generate SVG elevation chart
+   */
+  generateElevationSvg(elevationData, segments, width, height) {
+    const padding = { top: 15, right: 15, bottom: 25, left: 45 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    const elevations = elevationData.map(p => p.elevation);
+    const minElev = Math.min(...elevations);
+    const maxElev = Math.max(...elevations);
+    const elevRange = maxElev - minElev || 1;
+    
+    const maxDist = elevationData[elevationData.length - 1].distance;
+
+    // Scale functions
+    const xScale = (dist) => padding.left + (dist / maxDist) * chartWidth;
+    const yScale = (elev) => padding.top + chartHeight - ((elev - minElev) / elevRange) * chartHeight;
+
+    // Build filled area path
+    let areaPath = `M ${xScale(elevationData[0].distance)} ${padding.top + chartHeight}`;
+    areaPath += ` L ${xScale(elevationData[0].distance)} ${yScale(elevationData[0].elevation)}`;
+    
+    for (let i = 1; i < elevationData.length; i++) {
+      areaPath += ` L ${xScale(elevationData[i].distance)} ${yScale(elevationData[i].elevation)}`;
+    }
+    
+    areaPath += ` L ${xScale(elevationData[elevationData.length - 1].distance)} ${padding.top + chartHeight} Z`;
+
+    // Generate colored line segments
+    let segmentLines = '';
+    segments.forEach(seg => {
+      const x1 = xScale(seg.startDistance);
+      const y1 = yScale(seg.startElevation);
+      const x2 = xScale(seg.endDistance);
+      const y2 = yScale(seg.endElevation);
+      const color = this.getGradientColor(seg.category);
+      
+      segmentLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+        stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+    });
+
+    // Y-axis labels (5 labels)
+    let yLabels = '';
+    for (let i = 0; i < 5; i++) {
+      const elev = minElev + (elevRange / 4) * i;
+      const y = yScale(elev);
+      yLabels += `<text x="${padding.left - 5}" y="${y + 3}" 
+        fill="#888" font-size="9" text-anchor="end">${Math.round(elev)}</text>`;
+    }
+    
+    // X-axis labels (5 labels)
+    let xLabels = '';
+    for (let i = 0; i < 5; i++) {
+      const dist = (maxDist / 4) * i;
+      const x = xScale(dist);
+      xLabels += `<text x="${x}" y="${height - 5}" 
+        fill="#888" font-size="9" text-anchor="middle">${dist.toFixed(1)}km</text>`;
+    }
+
+    return `
+      <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+        <!-- Filled area -->
+        <path d="${areaPath}" fill="rgba(76, 175, 80, 0.15)" stroke="none"/>
+        
+        <!-- Colored line segments -->
+        ${segmentLines}
+        
+        <!-- Axis labels -->
+        ${yLabels}
+        ${xLabels}
+        
+        <!-- Y-axis title -->
+        <text x="12" y="${height / 2}" 
+          transform="rotate(-90, 12, ${height / 2})"
+          fill="#888" font-size="9" text-anchor="middle">m</text>
+      </svg>
+    `;
+  }
+
+  /**
+   * Analyze steep sections
+   */
+  analyzeSteepSections(segments) {
+    const steepSegments = segments.filter(s => 
+      s.category === 'steep' || s.category === 'verysteep'
+    );
+
+    if (steepSegments.length === 0) {
+      return { hasSteepSections: false };
+    }
+
+    // Group consecutive steep sections
+    const groups = [];
+    let currentGroup = null;
+
+    steepSegments.forEach(seg => {
+      if (!currentGroup) {
+        currentGroup = { ...seg, maxGradient: Math.abs(seg.gradient) };
+      } else if (Math.abs(seg.startDistance - currentGroup.endDistance) < 0.05) {
+        currentGroup.endDistance = seg.endDistance;
+        currentGroup.endElevation = seg.endElevation;
+        currentGroup.maxGradient = Math.max(currentGroup.maxGradient, Math.abs(seg.gradient));
+      } else {
+        groups.push(currentGroup);
+        currentGroup = { ...seg, maxGradient: Math.abs(seg.gradient) };
+      }
+    });
+    
+    if (currentGroup) groups.push(currentGroup);
+
+    const details = groups.map(g => {
+      const length = ((g.endDistance - g.startDistance) * 1000).toFixed(0);
+      const elevChange = Math.abs(g.endElevation - g.startElevation).toFixed(0);
+      const direction = g.gradient > 0 ? '↗️' : '↘️';
+      return `<div class="tg-steep-item">${direction} ${length}m section (${elevChange}m elevation, max ${g.maxGradient.toFixed(0)}% grade)</div>`;
+    }).join('');
+
+    return {
+      hasSteepSections: true,
+      count: groups.length,
+      details: details
+    };
+  }
+
+  /**
+   * Haversine distance calculation (km)
+   */
+  haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   renderGoodForSection(data) {
@@ -1020,6 +1326,100 @@ export class TrailGuideGeneratorV2 {
             font-weight: 600;
             color: #333;
             margin-bottom: 16px;
+        }
+        
+        /* Elevation Profile Section */
+        .tg-elevation-stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .tg-elev-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .tg-elev-icon {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .tg-elev-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .tg-elev-label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tg-elevation-chart {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .tg-gradient-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        .tg-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .tg-legend-color {
+            width: 16px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .tg-steep-warning {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .tg-steep-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .tg-steep-icon {
+            font-size: 1.2rem;
+        }
+        
+        .tg-steep-title {
+            font-weight: 600;
+            color: #f57c00;
+        }
+        
+        .tg-steep-details {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .tg-steep-item {
+            padding: 4px 0;
         }
         
         /* Good For Badges */
