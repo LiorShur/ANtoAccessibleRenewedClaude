@@ -27,8 +27,32 @@ export class ElevationChart {
       p.elevation !== null
     );
 
-    if (locationPoints.length < 2) {
+    if (locationPoints.length === 0) {
       return null;
+    }
+
+    // For single point, return minimal data
+    if (locationPoints.length === 1) {
+      const elevation = locationPoints[0].elevation;
+      return {
+        points: [{
+          distance: 0,
+          elevation: elevation,
+          lat: locationPoints[0].coords.lat,
+          lng: locationPoints[0].coords.lng,
+          timestamp: locationPoints[0].timestamp
+        }],
+        segments: [],
+        stats: {
+          minElevation: Math.round(elevation),
+          maxElevation: Math.round(elevation),
+          elevationGain: 0,
+          elevationLoss: 0,
+          totalDistance: 0,
+          pointCount: 1
+        },
+        singlePoint: true
+      };
     }
 
     // Calculate cumulative distance and elevation for each point
@@ -147,8 +171,13 @@ export class ElevationChart {
    * @returns {string} - HTML string
    */
   renderChart(elevationData, options = {}) {
-    if (!elevationData || !elevationData.points || elevationData.points.length < 2) {
+    if (!elevationData || !elevationData.points || elevationData.points.length === 0) {
       return this.renderNoDataMessage();
+    }
+
+    // Handle single point data
+    if (elevationData.singlePoint || elevationData.points.length === 1) {
+      return this.renderSinglePointMessage(elevationData.stats);
     }
 
     const {
@@ -381,6 +410,26 @@ export class ElevationChart {
           <p style="margin: 4px 0 0; font-size: 12px; color: #666;">
             Your device may not support altitude tracking,<br>
             or insufficient GPS points were recorded.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render single point message with elevation value
+   */
+  renderSinglePointMessage(stats) {
+    const elevation = stats?.maxElevation || stats?.minElevation || 0;
+    return `
+      <div class="elevation-chart-container" style="background: #1a1a1a; border-radius: 12px; padding: 24px; margin: 16px 0; text-align: center;">
+        <h3 style="margin: 0 0 16px; color: white; font-size: 16px; font-weight: 600;">📈 Elevation</h3>
+        <div style="color: white; font-size: 14px;">
+          <span style="font-size: 48px; display: block; margin-bottom: 8px; color: #4CAF50;">⛰️</span>
+          <p style="margin: 0; font-size: 32px; font-weight: 700;">${elevation}m</p>
+          <p style="margin: 8px 0 0; font-size: 12px; color: #888;">
+            Single point recorded.<br>
+            Track longer routes for elevation profile chart.
           </p>
         </div>
       </div>
