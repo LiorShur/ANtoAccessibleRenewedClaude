@@ -738,7 +738,23 @@ textarea:focus-visible,
     gap: 8px;
     z-index: 750;
   ">
-    <!-- Combined Heading Display with Compass -->
+    <!-- Elevation Display (on left) -->
+    <div id="elevationDisplay" style="
+      background: rgba(26, 26, 26, 0.95);
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    ">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#4CAF50">
+        <path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/>
+      </svg>
+      <span id="elevationValue" style="font-size: 14px; font-weight: 600; color: white; min-width: 50px;">---m</span>
+    </div>
+    
+    <!-- Combined Heading Display with Compass (CENTERED) -->
     <div id="headingDisplay" style="
       background: rgba(26, 26, 26, 0.95);
       padding: 4px 8px 4px 4px;
@@ -800,23 +816,7 @@ textarea:focus-visible,
       <span id="headingValue" style="font-size: 16px; font-weight: 700; color: white; min-width: 42px; text-align: right;">---°</span>
     </div>
     
-    <!-- Elevation Display -->
-    <div id="elevationDisplay" style="
-      background: rgba(26, 26, 26, 0.95);
-      padding: 4px 10px;
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="#4CAF50">
-        <path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/>
-      </svg>
-      <span id="elevationValue" style="font-size: 14px; font-weight: 600; color: white; min-width: 50px;">---m</span>
-    </div>
-    
-    <!-- Accessibility Survey Button (blue round) -->
+    <!-- Accessibility Survey Button (blue round, on right) -->
     <button id="accessibilitySurveyBtn" onclick="openAccessibilityForm()" title="Accessibility Survey" aria-label="Open accessibility survey" style="
       width: 36px; height: 36px;
       background: #2196F3;
