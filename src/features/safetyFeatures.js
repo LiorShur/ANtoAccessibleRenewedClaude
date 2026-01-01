@@ -1810,20 +1810,105 @@ If you cannot reach ${userName} and are concerned about their safety, please con
   }
 
   /**
-   * Get and display weather for current location
+   * Get and display weather for current location as centered modal
    */
   async showCurrentWeather(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+    // Remove any existing weather modal
+    const existingModal = document.getElementById('weatherModal');
+    if (existingModal) existingModal.remove();
     
-    container.innerHTML = `
-      <div class="weather-widget">
-        <div class="weather-loading">Loading weather...</div>
-      </div>
+    // Create modal backdrop
+    const modal = document.createElement('div');
+    modal.id = 'weatherModal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 140px;
     `;
     
+    // Create weather container
+    const weatherBox = document.createElement('div');
+    weatherBox.style.cssText = `
+      background: rgba(26, 26, 26, 0.95);
+      border-radius: 16px;
+      padding: 16px;
+      min-width: 220px;
+      max-width: 280px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      position: relative;
+      animation: slideDown 0.3s ease;
+    `;
+    
+    // Add animation style
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideDown {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = `
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    closeBtn.onclick = () => modal.remove();
+    
+    // Loading content
+    weatherBox.innerHTML = `
+      <div class="weather-widget" style="color: white; text-align: center;">
+        <div class="weather-loading" style="padding: 20px;">
+          <span style="font-size: 24px;">🌤️</span>
+          <p style="margin-top: 8px; color: #aaa;">Loading weather...</p>
+        </div>
+      </div>
+    `;
+    weatherBox.appendChild(closeBtn);
+    modal.appendChild(weatherBox);
+    document.body.appendChild(modal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+    
+    // Close on Escape key
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // Fetch and display weather
     if (!this.currentPosition) {
-      container.innerHTML = this.renderWeatherWidget(null);
+      weatherBox.innerHTML = this.renderWeatherWidgetModal(null);
+      weatherBox.appendChild(closeBtn);
       return;
     }
     
@@ -1832,7 +1917,39 @@ If you cannot reach ${userName} and are concerned about their safety, please con
       this.currentPosition.lng
     );
     
-    container.innerHTML = this.renderWeatherWidget(weather);
+    weatherBox.innerHTML = this.renderWeatherWidgetModal(weather);
+    weatherBox.appendChild(closeBtn);
+  }
+  
+  /**
+   * Render weather widget for modal display
+   */
+  renderWeatherWidgetModal(weather) {
+    if (!weather) {
+      return `
+        <div style="color: white; text-align: center; padding: 16px;">
+          <span style="font-size: 32px;">⚠️</span>
+          <p style="margin: 12px 0 8px; font-size: 16px;">Weather unavailable</p>
+          <p style="color: #888; font-size: 12px;">Could not get location or weather data</p>
+        </div>
+      `;
+    }
+    
+    return `
+      <div style="color: white;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <span style="font-size: 48px;">${weather.icon}</span>
+          <div>
+            <div style="font-size: 32px; font-weight: 700;">${weather.temp}${weather.tempUnit}</div>
+            <div style="color: #aaa; font-size: 14px;">${weather.description}</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px; justify-content: center; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <span style="color: #aaa; font-size: 14px;">💧 ${weather.humidity}%</span>
+          <span style="color: #aaa; font-size: 14px;">💨 ${weather.windSpeed} km/h</span>
+        </div>
+      </div>
+    `;
   }
 
   /**
