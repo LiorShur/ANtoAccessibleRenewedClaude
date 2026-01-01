@@ -447,6 +447,21 @@ async saveRoute() {
     
     // Clear route data after saving
     this.appState.clearRouteData();
+    
+    // Reset timer controller and display
+    const timerController = window.AccessNatureApp?.controllers?.timer;
+    if (timerController) {
+      timerController.reset();
+    } else {
+      // Fallback: reset timer display directly
+      const timerEl = document.getElementById('timer');
+      if (timerEl) timerEl.textContent = '00:00:00';
+    }
+    
+    // Reset distance display
+    const distanceEl = document.getElementById('distance');
+    if (distanceEl) distanceEl.textContent = '0.00 km';
+    
     console.log('✅ Route saved successfully:', savedSession);
     
   } catch (error) {
@@ -616,6 +631,21 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
 
   discardRoute() {
     this.appState.clearRouteData();
+    
+    // Reset timer controller and display
+    const timerController = window.AccessNatureApp?.controllers?.timer;
+    if (timerController) {
+      timerController.reset();
+    } else {
+      // Fallback: reset timer display directly
+      const timerEl = document.getElementById('timer');
+      if (timerEl) timerEl.textContent = '00:00:00';
+    }
+    
+    // Reset distance display
+    const distanceEl = document.getElementById('distance');
+    if (distanceEl) distanceEl.textContent = '0.00 km';
+    
     this.showSuccessMessage('Route discarded');
     console.log('🗑️ Route data discarded');
   }
