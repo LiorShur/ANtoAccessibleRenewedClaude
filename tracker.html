@@ -236,8 +236,26 @@ textarea:focus-visible,
   html.high-contrast #elevationDisplay svg {
     fill: black !important;
   }
+  html.high-contrast #elevationDisplay > div:first-child {
+    background: rgba(0, 0, 0, 0.1) !important;
+  }
   html.high-contrast #elevationValue {
     color: black !important;
+  }
+  
+  /* High contrast mode for accessibility survey button */
+  html.high-contrast #accessibilitySurveyBtn {
+    background: white !important;
+    border: 2px solid black;
+  }
+  html.high-contrast #accessibilitySurveyBtn span {
+    color: black !important;
+  }
+  html.high-contrast #accessibilitySurveyBtn > div:first-child {
+    background: black !important;
+  }
+  html.high-contrast #accessibilitySurveyBtn > div:first-child span {
+    color: white !important;
   }
   
   /* Hide old auth bar */
@@ -738,27 +756,39 @@ textarea:focus-visible,
     gap: 8px;
     z-index: 750;
   ">
-    <!-- Elevation Display (on left) -->
+    <!-- Elevation Display (on left) - capsule style -->
     <div id="elevationDisplay" style="
       background: rgba(26, 26, 26, 0.95);
-      padding: 4px 10px;
-      border-radius: 20px;
+      height: 44px;
+      padding: 0 12px 0 8px;
+      border-radius: 22px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="#4CAF50">
-        <path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/>
-      </svg>
-      <span id="elevationValue" style="font-size: 14px; font-weight: 600; color: white; min-width: 50px;">---m</span>
+      <div style="
+        width: 28px; height: 28px;
+        background: rgba(76, 175, 80, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#4CAF50">
+          <path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/>
+        </svg>
+      </div>
+      <span id="elevationValue" style="font-size: 15px; font-weight: 600; color: white; min-width: 50px;">---m</span>
     </div>
     
-    <!-- Combined Heading Display with Compass (CENTERED) -->
+    <!-- Combined Heading Display with Compass (CENTERED) - capsule style -->
     <div id="headingDisplay" style="
       background: rgba(26, 26, 26, 0.95);
-      padding: 4px 8px 4px 4px;
-      border-radius: 20px;
+      height: 44px;
+      padding: 0 12px 0 4px;
+      border-radius: 22px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -816,20 +846,33 @@ textarea:focus-visible,
       <span id="headingValue" style="font-size: 16px; font-weight: 700; color: white; min-width: 42px; text-align: right;">---°</span>
     </div>
     
-    <!-- Accessibility Survey Button (blue round, on right) -->
+    <!-- Accessibility Survey Button (capsule style, on right) -->
     <button id="accessibilitySurveyBtn" onclick="openAccessibilityForm()" title="Accessibility Survey" aria-label="Open accessibility survey" style="
-      width: 36px; height: 36px;
-      background: #2196F3;
+      height: 44px;
+      padding: 0 14px 0 8px;
+      background: rgba(26, 26, 26, 0.95);
       border: none;
-      border-radius: 50%;
+      border-radius: 22px;
       color: white;
-      font-size: 16px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
-    ">♿</button>
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    ">
+      <div style="
+        width: 32px; height: 32px;
+        background: #2196F3;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      ">
+        <span style="font-size: 20px; line-height: 1;">♿</span>
+      </div>
+      <span style="font-size: 13px; font-weight: 600; color: white;">Survey</span>
+    </button>
   </div>
 
   <!-- Compass Debug Panel (tap compass 3x to toggle) -->
