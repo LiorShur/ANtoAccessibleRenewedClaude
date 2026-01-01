@@ -170,6 +170,26 @@ export class AppState {
     this.isPaused = false;
     this.stopAutoBackup();
     this.clearRouteBackup();
+    
+    // Reset UI displays
+    this.resetDisplays();
+  }
+  
+  // Reset timer and distance displays
+  resetDisplays() {
+    // Reset timer display
+    const timerEl = document.getElementById('timer');
+    if (timerEl) timerEl.textContent = '00:00:00';
+    
+    // Reset distance display
+    const distanceEl = document.getElementById('distance');
+    if (distanceEl) distanceEl.textContent = '0.00 km';
+    
+    // Also reset timer controller if available
+    const timerController = window.AccessNatureApp?.controllers?.timer;
+    if (timerController) {
+      timerController.reset();
+    }
   }
 
   updateDistance(distance) {
