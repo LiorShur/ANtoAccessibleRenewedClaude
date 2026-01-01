@@ -328,7 +328,8 @@ textarea:focus-visible,
   body.fullscreen-mode .feedback-fab,
   body.fullscreen-mode #sosButton,
   body.fullscreen-mode .compass-debug-panel,
-  body.fullscreen-mode #moreOptionsPanel {
+  body.fullscreen-mode #moreOptionsPanel,
+  body.fullscreen-mode #mapLayersMenu {
     display: none !important;
   }
   
@@ -934,7 +935,88 @@ textarea:focus-visible,
       </svg>
     </button>
     
-    <!-- High Contrast Toggle (positioned under map rotate) -->
+    <!-- Map Layers Toggle -->
+    <div style="position: relative;">
+      <button id="mapLayersBtn" title="Map Layers" aria-label="Change map layer" style="
+        width: 44px; height: 44px;
+        background: rgba(26, 26, 26, 0.95);
+        border: 1px solid #333;
+        border-radius: 50%;
+        color: white; font-size: 18px;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+      ">
+        <svg id="mapLayersIcon" width="22" height="22" viewBox="0 0 24 24" fill="white">
+          <path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/>
+        </svg>
+      </button>
+      
+      <!-- Layers Menu (hidden by default) -->
+      <div id="mapLayersMenu" style="
+        position: absolute;
+        left: 52px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(26, 26, 26, 0.95);
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 8px;
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 120px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 800;
+      ">
+        <button class="layer-option" data-layer="street" style="
+          background: rgba(76, 175, 80, 0.3);
+          border: 1px solid #4CAF50;
+          border-radius: 8px;
+          color: white;
+          padding: 8px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          text-align: left;
+        ">
+          <span style="font-size: 16px;">🗺️</span> Street
+        </button>
+        <button class="layer-option" data-layer="satellite" style="
+          background: transparent;
+          border: 1px solid #444;
+          border-radius: 8px;
+          color: white;
+          padding: 8px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          text-align: left;
+        ">
+          <span style="font-size: 16px;">🛰️</span> Satellite
+        </button>
+        <button class="layer-option" data-layer="terrain" style="
+          background: transparent;
+          border: 1px solid #444;
+          border-radius: 8px;
+          color: white;
+          padding: 8px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          text-align: left;
+        ">
+          <span style="font-size: 16px;">⛰️</span> Terrain
+        </button>
+      </div>
+    </div>
+    
+    <!-- High Contrast Toggle (positioned under map layers) -->
     <button id="highContrastToggleTracker" title="Toggle High Contrast" aria-label="Toggle high contrast mode" style="
       width: 44px; height: 44px;
       background: rgba(26, 26, 26, 0.95);
@@ -1929,6 +2011,62 @@ textarea:focus-visible,
   
   // Make function globally available
   window.toggleFullscreenMode = toggleFullscreenMode;
+  
+  // ===== MAP LAYERS TOGGLE =====
+  (function() {
+    const layersBtn = document.getElementById('mapLayersBtn');
+    const layersMenu = document.getElementById('mapLayersMenu');
+    const layerOptions = document.querySelectorAll('.layer-option');
+    
+    if (!layersBtn || !layersMenu) return;
+    
+    // Toggle menu visibility
+    layersBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = layersMenu.style.display === 'flex';
+      layersMenu.style.display = isVisible ? 'none' : 'flex';
+    });
+    
+    // Handle layer selection
+    layerOptions.forEach(option => {
+      option.addEventListener('click', (e) => {
+        const layerName = option.dataset.layer;
+        const mapController = window.AccessNatureApp?.controllers?.map;
+        
+        if (mapController && mapController.switchLayer) {
+          const switched = mapController.switchLayer(layerName);
+          if (switched) {
+            // Update button styles
+            layerOptions.forEach(opt => {
+              if (opt.dataset.layer === layerName) {
+                opt.style.background = 'rgba(76, 175, 80, 0.3)';
+                opt.style.borderColor = '#4CAF50';
+              } else {
+                opt.style.background = 'transparent';
+                opt.style.borderColor = '#444';
+              }
+            });
+            
+            // Show toast
+            const layerNames = { street: 'Street', satellite: 'Satellite', terrain: 'Terrain' };
+            window.toast?.show(`${layerNames[layerName]} view`);
+          }
+        }
+        
+        // Close menu
+        layersMenu.style.display = 'none';
+      });
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!layersBtn.contains(e.target) && !layersMenu.contains(e.target)) {
+        layersMenu.style.display = 'none';
+      }
+    });
+    
+    console.log('[TrackerUI] Map layers toggle initialized');
+  })();
   
   // ===== HIGH CONTRAST TOGGLE (in left controls) =====
   (function() {
