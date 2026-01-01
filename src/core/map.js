@@ -7,6 +7,9 @@ export class MapController {
     this.marker = null;
     this.routePolylines = [];
     this.routeMarkers = []; // Add this to track all route markers
+    this.currentLayer = null;
+    this.layers = {};
+    this.currentLayerName = 'street';
   }
 
   async initialize() {
@@ -17,17 +20,80 @@ export class MapController {
 
     this.map = L.map('map').setView([32.0853, 34.7818], 15);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(this.map);
+    // Define available tile layers
+    this.layers = {
+      street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '© Esri, Maxar, Earthstar Geographics'
+      }),
+      terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        attribution: '© OpenTopoMap (CC-BY-SA)'
+      })
+    };
+
+    // Set default layer
+    this.currentLayer = this.layers.street;
+    this.currentLayer.addTo(this.map);
 
     this.marker = L.marker([32.0853, 34.7818])
       .addTo(this.map)
       .bindPopup("Current Location");
 
     await this.getCurrentLocation();
-    console.log('✅ Map controller initialized');
+    console.log('✅ Map controller initialized with layer switching support');
+  }
+
+  /**
+   * Switch to a different map layer
+   * @param {string} layerName - 'street', 'satellite', or 'terrain'
+   */
+  switchLayer(layerName) {
+    if (!this.layers[layerName]) {
+      console.warn(`Unknown layer: ${layerName}`);
+      return false;
+    }
+
+    if (this.currentLayerName === layerName) {
+      return false; // Already on this layer
+    }
+
+    // Remove current layer
+    if (this.currentLayer) {
+      this.map.removeLayer(this.currentLayer);
+    }
+
+    // Add new layer
+    this.currentLayer = this.layers[layerName];
+    this.currentLayer.addTo(this.map);
+    this.currentLayerName = layerName;
+
+    console.log(`🗺️ Switched to ${layerName} layer`);
+    return true;
+  }
+
+  /**
+   * Cycle through available layers
+   * @returns {string} The new layer name
+   */
+  cycleLayer() {
+    const layerOrder = ['street', 'satellite', 'terrain'];
+    const currentIndex = layerOrder.indexOf(this.currentLayerName);
+    const nextIndex = (currentIndex + 1) % layerOrder.length;
+    const nextLayer = layerOrder[nextIndex];
+    this.switchLayer(nextLayer);
+    return nextLayer;
+  }
+
+  /**
+   * Get current layer name
+   */
+  getCurrentLayerName() {
+    return this.currentLayerName;
   }
 
   async getCurrentLocation() {
