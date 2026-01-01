@@ -416,9 +416,29 @@ export class TrailGuideGeneratorV2 {
       !isNaN(p.elevation)
     );
 
-    // Need at least 2 points for a chart
-    if (locationPoints.length < 2) {
-      return ''; // Don't show section if no elevation data
+    // Need at least 1 point to show elevation data
+    if (locationPoints.length === 0) {
+      return ''; // Don't show section if no elevation data at all
+    }
+
+    // For just 1 point, show simple elevation display
+    if (locationPoints.length === 1) {
+      const elevation = Math.round(locationPoints[0].elevation);
+      return `
+        <section class="tg-section tg-elevation">
+            <h2 class="tg-section-title">📈 Elevation</h2>
+            <div class="tg-elevation-stats" style="justify-content: center;">
+                <div class="tg-elev-stat">
+                    <span class="tg-elev-icon" style="color: #4CAF50;">⛰️</span>
+                    <span class="tg-elev-value">${elevation}m</span>
+                    <span class="tg-elev-label">Elevation</span>
+                </div>
+            </div>
+            <p style="text-align: center; color: #888; font-size: 0.85rem; margin-top: 12px;">
+                Single point recorded. Track longer routes for elevation profile chart.
+            </p>
+        </section>
+      `;
     }
 
     // Calculate cumulative distance and build elevation data
