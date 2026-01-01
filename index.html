@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessible - Making Paths Clear For Everyone</title>
+  
+  <!-- Preconnect to external origins for faster loading -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+  
+  <!-- CRITICAL CSS - Nav styles inline for immediate render -->
+  <style>
+    /* WCAG Accessibility Styles */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Focus styles for all interactive elements */
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 3px solid #2c5530;
+      outline-offset: 2px;
+    }
+
+    /* Skip to main content link */
+    .skip-link {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: #2c5530;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100000;
+      text-decoration: none;
+      font-weight: 500;
+      border-radius: 0 0 4px 0;
+      transform: translateY(-100%);
+      transition: transform 0.2s ease;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: rgba(255,255,255,0.98);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 10000;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #111827;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-auth-indicator {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .nav-auth-indicator .auth-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #f3f4f6;
+      border-radius: 16px;
+      font-size: 0.75rem;
+    }
+    .nav-auth-indicator .auth-status.signed-in {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    /* Desktop: show nav-menu, hide hamburger */
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-menu .nav-link {
+      padding: 8px 12px;
+      color: #4b5563;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .nav-menu .nav-link:hover { background: #f3f4f6; }
+    .nav-menu .nav-link.active { background: #667eea; color: white; }
+    .menu-toggle { display: none; }
+    
+    /* Mobile nav styles now handled by unified-nav.css */
+    /* Hamburger icon styles */
+    .hamburger-icon {
+      width: 20px;
+      height: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: #374151;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(1) {
+      transform: rotate(45deg) translate(4px, 4px);
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(2) {
+      opacity: 0;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(3) {
+      transform: rotate(-45deg) translate(4px, -4px);
+    }
+    
+    /* High contrast toggle - circular button style */
+    .high-contrast-toggle {
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0));
+      left: 20px;
+      z-index: 9999;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: rgba(26, 26, 26, 0.95);
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .high-contrast-toggle .toggle-text {
+      display: none;
+    }
+    
+    .high-contrast-toggle .toggle-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2c5530">
+  <meta name="description" content="Making outdoor spaces accessible for everyone. Document trails, report barriers, and discover accessible routes.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Accessible">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icons/icon.svg">
+  
+  <!-- External CSS - normal blocking load -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+  
+  <!-- App CSS -->
+  <link rel="stylesheet" href="src/css/landing.css">
+  <link rel="stylesheet" href="src/css/auth.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/ui-utilities.css">
+  <link rel="stylesheet" href="src/css/pwa.css">
+  <link rel="stylesheet" href="src/css/unified-nav.css">
+  <link rel="stylesheet" href="src/css/mobile-responsive.css">
+  <link rel="stylesheet" href="src/css/global-nav.css">
+  <link rel="stylesheet" href="src/css/error-messages.css">
+
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      // Apply high contrast immediately if saved
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+      
+      // Debug: Mark that critical script ran
+      document.documentElement.dataset.criticalScriptRan = 'true';
+    })();
+  </script>
+
+  <style>
+  /* Non-critical nav styles - can load from CSS */
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #111827;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .nav-auth-indicator .auth-status.signed-in {
+    background: #dcfce7;
+    color: #166534;
+  }
+  /* nav-menu display is handled by critical CSS above */
+  .nav-menu .nav-link {
+    padding: 8px 16px;
+    color: #4b5563;
+    text-decoration: none;
+    border-radius: 8px;
+  }
+  .nav-menu .nav-link:hover { background: #f3f4f6; }
+  .nav-menu .nav-link.active { background: #667eea; color: white; }
+  .nav-menu .nav-auth .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+  }
+  /* menu-toggle display is handled by critical CSS above */
+  .hero-section { margin-top: 56px; }
+  .auth-status-landing { display: none !important; }
+  
+  @media (max-width: 768px) {
+    .hero-section { margin-top: 50px; }
+    .nav-menu .nav-auth { width: 100%; margin-top: 8px; }
+    .nav-menu .nav-auth .btn { width: 100%; padding: 12px; font-size: 0.9rem; }
+    
+    /* Ensure nav elements always visible on mobile */
+    .nav-auth-indicator { 
+      display: flex !important;
+      flex-shrink: 0;
+      min-width: auto;
+      font-size: 0.7rem;
+    }
+    .nav-auth-indicator .auth-status {
+      padding: 3px 8px;
+    }
+  }
+  
+  /* Auth modal must be above everything */
+  .auth-modal {
+    z-index: 20000 !important;
+  }
+  .auth-modal-backdrop {
+    z-index: 19999 !important;
+  }
+  .auth-modal-container {
+    z-index: 20001 !important;
+  }
+  
+  /* Loading indicators for stats */
+  .stat-loading {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  .stat-big.stat-loading,
+  .stat-number.stat-loading {
+    width: 32px;
+    height: 32px;
+    border-width: 4px;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Featured trails loading skeleton */
+  .featured-loading {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    padding: 40px 0;
+  }
+  
+  .skeleton-card {
+    width: 280px;
+    height: 200px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 12px;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+</style>
+
+<!-- Critical: Apply preferences immediately before render -->
+<script>
+(function() {
+  // Apply high contrast immediately from localStorage
+  try {
+    const prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+    if (prefs.highContrast) {
+      document.documentElement.classList.add('high-contrast');
+    }
+  } catch(e) {}
+})();
+</script>
+
+<!-- Analytics & Error Monitoring -->
+<script src="src/utils/monitoring.js" defer></script>
+</head>
+<body>
+<!-- Skip to main content link for keyboard users -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- Navigation -->
+<nav class="top-nav" role="navigation" aria-label="Main navigation">
+  <a href="index.html" class="nav-brand">♿ Accessible</a>
+  <div class="nav-auth-indicator">
+    <div class="auth-status" id="navAuthIndicator">
+      <span aria-hidden="true">👤</span>
+      <span id="navAuthStatusText">Guest</span>
+    </div>
+  </div>
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
+    <span class="hamburger-icon" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </span>
+  </button>
+  <div class="nav-menu" id="navMenu" role="menu">
+    <a href="index.html" class="nav-link active" role="menuitem">🏠 Home</a>
+    <a href="tracker.html" class="nav-link" role="menuitem">🗺️ Track</a>
+    <a href="reports.html" class="nav-link" role="menuitem">📋 Reports</a>
+    <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;" role="menuitem">👤 Profile</a>
+    <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;" role="menuitem" aria-label="Open mobility profile settings">
+      ♿ Mobility Profile
+    </button>
+    <div class="nav-auth">
+      <button id="navAuthBtn" class="btn" aria-label="Sign in to your account">Sign In</button>
+    </div>
+  </div>
+</nav>
+
+<!-- High Contrast Toggle -->
+<button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode" aria-pressed="false">
+  <span class="toggle-icon" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z"/>
+    </svg>
+  </span>
+  <span class="toggle-text">High Contrast</span>
+</button>
+
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-background"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">♿ Accessible</h1>
+      <p class="hero-subtitle">Making outdoor spaces accessible for everyone</p>
+      
+      <!-- Auth Status -->
+      <div id="authStatusBar" class="auth-status-landing">
+        <div id="userInfo" class="user-info hidden">
+          <span class="user-greeting">Welcome back, <span id="userEmail"></span>!</span>
+          <button id="logoutBtn" class="auth-btn logout-btn">Logout</button>
+        </div>
+        <div id="authPrompt" class="auth-prompt">
+          <button id="showAuthBtn" class="auth-btn login-btn">Sign In</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- Add this anywhere in your landing page for debugging -->
+<!-- <div style="position: fixed; top: 80px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px;">
+  <button onclick="debugTrailGuides()" style="background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 2px;">
+    🔍 Check Guides
+  </button>
+  <button onclick="makeGuidesPublic()" style="background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; margin: 2px;">
+    🌍 Make Public
+  </button>
+</div> -->
+
+<script>
+// Add these global functions for easy debugging
+async function debugTrailGuides() {
+  try {
+    const { collection, getDocs, query, limit } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db } = await import("./firebase-setup.js");
+    
+    const guidesQuery = query(collection(db, 'trail_guides'), limit(20));
+    const snapshot = await getDocs(guidesQuery);
+    
+    console.log('📊 TOTAL GUIDES:', snapshot.size);
+    alert(`Found ${snapshot.size} trail guides total`);
+    
+    if (snapshot.size > 0) {
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('📄', data.routeName, '- Public:', data.isPublic, '- User:', data.userEmail);
+      });
+    }
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+    alert('Debug failed: ' + error.message);
+  }
+}
+
+async function makeGuidesPublic() {
+  try {
+    const { collection, getDocs, query, doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+    const { db, auth } = await import("./firebase-setup.js");
+    
+    if (!auth.currentUser) {
+      alert('Please sign in first!');
+      return;
+    }
+    
+    const guidesQuery = query(collection(db, 'trail_guides'));
+    const snapshot = await getDocs(guidesQuery);
+    
+    let updated = 0;
+    const promises = [];
+    
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.userId === auth.currentUser.uid && !data.isPublic) {
+        promises.push(updateDoc(doc(db, 'trail_guides', docSnap.id), {
+          isPublic: true,
+          publishedAt: new Date().toISOString()
+        }));
+        updated++;
+      }
+    });
+    
+    if (promises.length === 0) {
+      alert('No private guides found to make public!');
+      return;
+    }
+    
+    await Promise.all(promises);
+    alert(`✅ Made ${updated} guides public!`);
+    
+  } catch (error) {
+    console.error('❌ Failed:', error);
+    alert('Failed: ' + error.message);
+  }
+}
+</script>
+  <!-- Main Navigation -->
+  <main id="main-content" class="main-navigation" role="main">
+    <div class="nav-container">
+      
+      <!-- Search Trail Guides -->
+      <div class="nav-card discover-card">
+        <div class="nav-card-icon">🔍</div>
+        <h2>Discover Accessible Trails</h2>
+        <p>Browse community-contributed accessible trail guides with detailed accessibility information, photos, and reviews.</p>
+        
+        <div class="nav-card-features">
+          <span class="feature-tag">♿ Wheelchair Access</span>
+          <span class="feature-tag">📷 Photos & Notes</span>
+          <span class="feature-tag">⭐ Community Reviews</span>
+          <span class="feature-tag">🗺️ Interactive Maps</span>
+        </div>
+        
+        <button class="nav-card-button primary" onclick="openTrailBrowser()">
+          🔍 Browse Trail Guides
+        </button>
+        
+        <div class="quick-search" role="search">
+          <label for="quickSearch" class="visually-hidden">Search trails</label>
+          <input type="text" id="quickSearch" placeholder="Quick search trails..." maxlength="50" aria-label="Quick search trails">
+          <button onclick="quickSearch()" class="search-btn" aria-label="Search trails">Search</button>
+        </div>
+      </div>
+
+      <!-- Track New Trail -->
+      <div class="nav-card track-card">
+        <div class="nav-card-icon">📍</div>
+        <h2>Map a New Trail</h2>
+        <p>Use GPS tracking to document new accessible routes. Record accessibility features, take photos, and create trail guides for the community.</p>
+        
+        <div class="nav-card-features">
+          <span class="feature-tag">📱 GPS Tracking</span>
+          <span class="feature-tag">📝 Accessibility Survey</span>
+          <span class="feature-tag">📷 Photo Documentation</span>
+          <span class="feature-tag">☁️ Cloud Sync</span>
+        </div>
+        
+        <button class="nav-card-button secondary" onclick="openTracker()">
+          📍 Start Tracking
+        </button>
+        
+        <div class="tracker-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="totalRoutes">0</span>
+            <span class="stat-label">Routes Mapped</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="totalDistance">0</span>
+            <span class="stat-label">km Documented</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Stats Section -->
+  <div class="community-section">
+    <div class="community-container">
+      <h3>🌍 Community Impact</h3>
+      <div class="community-stats">
+        <div class="community-stat">
+          <span class="stat-big" id="publicGuides">0</span>
+          <span class="stat-desc">Public Trail Guides</span>
+        </div>
+        <div class="community-stat">
+          <span class="stat-big" id="totalKm">0</span>
+          <span class="stat-desc">Kilometers Mapped</span>
+        </div>
+        <div class="community-stat">
+          <span class="stat-big" id="accessibleTrails">0</span>
+          <span class="stat-desc">Wheelchair Accessible</span>
+        </div>
+        <div class="community-stat">
+          <span class="stat-big" id="totalUsers">0</span>
+          <span class="stat-desc">Contributors</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Trails Section (logged-in users only) -->
+  <div class="my-trails-section" id="myTrailsSection" style="display: none;">
+    <div class="my-trails-container">
+      <div class="my-trails-header">
+        <h3>📍 My Trail Guides</h3>
+        <a href="tracker.html" class="new-trail-btn">+ Record New Trail</a>
+      </div>
+      <div class="my-trails-stats" id="myTrailsStats">
+        <!-- Stats populated by JS -->
+      </div>
+      <div class="my-trails-actions">
+        <button class="view-guides-btn" id="viewMyGuidesBtn" onclick="window.landingController?.showMyTrailGuides()">
+          📚 View My Trail Guides
+        </button>
+      </div>
+      <div class="my-trails-empty" id="myTrailsEmpty" style="display: none;">
+        <p>🥾 You haven't created any trail guides yet!</p>
+        <a href="tracker.html" class="start-trail-btn">Start Your First Trail</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Challenges Section -->
+  <div class="challenges-section" style="padding: 20px 0; background: #f9fafb;">
+    <div class="challenges-container" style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+      <div id="communityChallengesPanel">
+        <!-- Challenges will be dynamically inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Featured Trails -->
+  <div class="featured-section">
+    <div class="featured-container">
+      <h3>⭐ Featured Accessible Trails</h3>
+      
+      <!-- Trail Search & Filters -->
+      <div id="trailSearchContainer"></div>
+      
+      <!-- Results Header -->
+      <div id="trailResultsHeader"></div>
+      
+      <div id="featuredTrails" class="featured-grid">
+        <!-- Dynamically populated -->
+      </div>
+      <button class="load-more-btn" id="loadMoreBtn" onclick="loadMoreFeatured()">Load More Trails</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer-section">
+    <div class="footer-container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <h4>♿ Accessible</h4>
+          <p>Making outdoor spaces accessible for everyone</p>
+        </div>
+        <div class="footer-links">
+          <a href="#" onclick="showAbout(); return false;">About</a>
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms of Service</a>
+          <a href="#" onclick="showContact(); return false;">Contact</a>
+          <a href="beta-guide.html" style="color: #7c3aed;">📝 Beta Guide</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Accessible. Making trails accessible for all abilities.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Trail Browser Modal -->
+  <div id="trailBrowserModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeTrailBrowser()"></div>
+    <div class="modal-container trail-browser">
+      <div class="modal-header">
+        <h2>🔍 Browse Accessible Trails</h2>
+        <button class="modal-close" onclick="closeTrailBrowser()">✕</button>
+      </div>
+      
+      <div class="modal-content">
+        <!-- Search and Filters -->
+        <div class="search-section" role="search" aria-label="Trail search">
+          <div class="search-bar">
+            <label for="trailSearch" class="visually-hidden">Search trail names and locations</label>
+            <input type="text" id="trailSearch" placeholder="Search trail names, locations..." maxlength="100" aria-label="Search trail names and locations">
+            <button onclick="searchTrails()" class="search-button" aria-label="Search trails">🔍 Search</button>
+          </div>
+          
+          <div class="filters-section">
+            <h4 id="filterHeading">🎯 Filter by Accessibility</h4>
+            <div class="filter-grid" role="group" aria-labelledby="filterHeading">
+              <label for="wheelchairFilter" class="visually-hidden">Filter by wheelchair access</label>
+              <select id="wheelchairFilter" aria-label="Filter by wheelchair access">
+                <option value="">Wheelchair Access</option>
+                <option value="Fully Accessible">Fully Accessible</option>
+                <option value="Partially Accessible">Partially Accessible</option>
+                <option value="Not Accessible">Not Accessible</option>
+              </select>
+              
+              <label for="difficultyFilter" class="visually-hidden">Filter by difficulty level</label>
+              <select id="difficultyFilter" aria-label="Filter by difficulty level">
+                <option value="">Difficulty Level</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Difficult">Difficult</option>
+              </select>
+              
+              <label for="distanceFilter" class="visually-hidden">Filter by distance</label>
+              <select id="distanceFilter" aria-label="Filter by distance">
+                <option value="">Distance</option>
+                <option value="0-2">0-2 km</option>
+                <option value="2-5">2-5 km</option>
+                <option value="5-10">5-10 km</option>
+                <option value="10+">10+ km</option>
+              </select>
+              
+              <button onclick="applyFilters()" class="filter-apply-btn" aria-label="Apply selected filters">Apply Filters</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="results-section" aria-live="polite">
+          <div class="results-header">
+            <h4>📍 Trail Results</h4>
+            <span id="resultsCount" aria-live="polite">0 trails found</span>
+          </div>
+          
+          <div id="trailResults" class="trail-results-grid" role="list" aria-label="Trail search results">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <div class="results-pagination">
+            <button id="loadMoreBtn" onclick="loadMoreResults()" class="load-more-btn hidden">
+              Load More Trails
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="auth-modal hidden" role="dialog" aria-labelledby="authModalTitle" aria-modal="true">
+    <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
+    <div class="auth-modal-container">
+      <div class="auth-modal-header">
+        <h2 id="authModalTitle">Welcome to Accessible</h2>
+        <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close authentication modal">✕</button>
+      </div>
+      
+      <div class="auth-modal-content">
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-form active">
+          <div class="auth-form-header">
+            <h3>Sign In to Your Account</h3>
+            <p>Continue your accessibility mapping journey</p>
+          </div>
+          
+          <form class="auth-inputs" id="loginFormElement" aria-label="Sign in form">
+            <div class="input-group">
+              <label for="loginEmail" class="visually-hidden">Email address</label>
+              <input type="email" id="loginEmail" placeholder="Email address" aria-label="Email address" required autocomplete="email">
+              <span class="input-icon" aria-hidden="true">📧</span>
+            </div>
+            
+            <div class="input-group password-group">
+              <label for="loginPassword" class="visually-hidden">Password</label>
+              <input type="password" id="loginPassword" placeholder="Password" aria-label="Password" required autocomplete="current-password">
+              <span class="input-icon" aria-hidden="true">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Show password">👁️</button>
+            </div>
+            
+            <button type="submit" id="loginBtn" class="auth-submit-btn">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-spinner hidden" aria-hidden="true">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Don't have an account? <button type="button" onclick="switchToSignup()" class="switch-btn">Sign up</button></p>
+          </div>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" class="auth-form">
+          <div class="auth-form-header">
+            <h3>Create Your Account</h3>
+            <p>Join the community making nature accessible</p>
+          </div>
+          
+          <form class="auth-inputs" id="signupFormElement" aria-label="Create account form">
+            <div class="input-group">
+              <label for="signupName" class="visually-hidden">Full name</label>
+              <input type="text" id="signupName" placeholder="Full name" aria-label="Full name" required autocomplete="name">
+              <span class="input-icon" aria-hidden="true">👤</span>
+            </div>
+            
+            <div class="input-group">
+              <label for="signupEmail" class="visually-hidden">Email address</label>
+              <input type="email" id="signupEmail" placeholder="Email address" aria-label="Email address" required autocomplete="email">
+              <span class="input-icon" aria-hidden="true">📧</span>
+            </div>
+            
+            <div class="input-group password-group">
+              <label for="signupPassword" class="visually-hidden">Create password</label>
+              <input type="password" id="signupPassword" placeholder="Create password" aria-label="Create password" required autocomplete="new-password">
+              <span class="input-icon" aria-hidden="true">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Show password">👁️</button>
+            </div>
+            
+            <button type="submit" id="signupBtn" class="auth-submit-btn">
+              <span class="btn-text">Create Account</span>
+              <span class="btn-spinner hidden" aria-hidden="true">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Already have an account? <button type="button" onclick="switchToLogin()" class="switch-btn">Sign in</button></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal Helper Functions -->
+  <script>
+    function closeAuthModal() {
+      document.getElementById('authModal')?.classList.add('hidden');
+    }
+    function switchToSignup() {
+      document.getElementById('loginForm')?.classList.remove('active');
+      document.getElementById('signupForm')?.classList.add('active');
+    }
+    function switchToLogin() {
+      document.getElementById('signupForm')?.classList.remove('active');
+      document.getElementById('loginForm')?.classList.add('active');
+    }
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.setAttribute('aria-label', 'Show password');
+      }
+    }
+    
+    // Setup hamburger menu immediately (no Firebase dependency)
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const navMenu = document.getElementById('navMenu');
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+      });
+      
+      // Close menu when clicking links or buttons
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      // Close menu when clicking outside
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+      
+      // High Contrast Toggle - Immediate handler
+      var hcToggle = document.getElementById('highContrastToggle');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcToggle) {
+          var svg = hcToggle.querySelector('svg');
+          if (svg) {
+            svg.style.fill = isHC ? '#000' : '#fff';
+          }
+          hcToggle.style.background = isHC ? '#fff' : 'rgba(26, 26, 26, 0.95)';
+          hcToggle.style.borderColor = isHC ? '#000' : '#333';
+        }
+      }
+      
+      updateHCButton();
+      
+      // Mark as initialized to prevent module from adding duplicate listener
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+      });
+    })();
+  </script>
+
+  <!-- Firebase Setup -->
+  <script type="module" src="firebase-setup.js"></script>
+  
+  <!-- App JavaScript -->
+  <script type="module" src="src/landing.js"></script>
+  <script type="module" src="src/features/auth.js"></script>
+  <script type="module" src="src/ui/displayPreferences.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
+
+  <script type="module">
+  import { auth } from './firebase-setup.js';
+  import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+  
+  function openAuthModal() {
+    document.getElementById('authModal')?.classList.remove('hidden');
+  }
+  
+  // Expose globally for bottom nav
+  window.openAuthModal = openAuthModal;
+  
+  // Login form handler
+  document.getElementById('loginFormElement')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('loginBtn');
+    
+    try {
+      btn.disabled = true;
+      btn.querySelector('.btn-text').textContent = 'Signing in...';
+      await signInWithEmailAndPassword(auth, email, password);
+      closeAuthModal();
+    } catch (error) {
+      alert('Sign in failed: ' + error.message);
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('.btn-text').textContent = 'Sign In';
+    }
+  });
+  
+  // Signup form handler
+  document.getElementById('signupFormElement')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('signupName').value;
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+    const btn = document.getElementById('signupBtn');
+    
+    try {
+      btn.disabled = true;
+      btn.querySelector('.btn-text').textContent = 'Creating account...';
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(result.user, { displayName: name });
+      closeAuthModal();
+    } catch (error) {
+      alert('Sign up failed: ' + error.message);
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('.btn-text').textContent = 'Create Account';
+    }
+  });
+  
+  onAuthStateChanged(auth, async (user) => {
+    const indicator = document.getElementById('navAuthIndicator');
+    const text = document.getElementById('navAuthStatusText');
+    const btn = document.getElementById('navAuthBtn');
+    
+    if (user) {
+      // Verify user still exists
+      try {
+        await user.reload();
+      } catch (e) {
+        console.error('User session invalid');
+        try { await signOut(auth); } catch (se) {}
+        return;
+      }
+      
+      indicator?.classList.add('signed-in');
+      if (text) text.textContent = user.displayName || user.email?.split('@')[0];
+      if (btn) { btn.textContent = 'Sign Out'; btn.onclick = () => signOut(auth); }
+      
+      // Refresh user-specific content when signing in
+      console.log('🔄 User signed in, refreshing content...');
+      if (window.landingController) {
+        await window.landingController.updateLandingAuthStatus();
+      }
+    } else {
+      indicator?.classList.remove('signed-in');
+      if (text) text.textContent = 'Guest';
+      if (btn) { 
+        btn.textContent = 'Sign In'; 
+        btn.onclick = openAuthModal;
+      }
+      
+      // Hide user-specific content when signing out
+      if (window.landingController) {
+        await window.landingController.updateLandingAuthStatus();
+      }
+    }
+  });
+</script>
+
+<!-- Global Bottom Navigation -->
+<script type="module">
+  import { initGlobalNav } from './src/components/globalNav.js';
+  
+  // Initialize bottom nav
+  initGlobalNav({ currentPage: 'home' });
+  
+  // Handle URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+  const signin = urlParams.get('signin');
+  
+  // Clear URL params after reading
+  if (action || signin) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+  
+  // Handle signin request
+  if (signin === 'true') {
+    setTimeout(() => window.openAuthModal?.(), 500);
+  }
+  
+  // Handle search-trails action
+  if (action === 'search-trails') {
+    setTimeout(() => window.openTrailBrowser?.(), 1000);
+  }
+</script>
+</body>
+</html>

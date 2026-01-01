@@ -1,0 +1,384 @@
+/* ==============================================
+   ACCESSIBLE - GLOBAL BOTTOM NAVIGATION
+   Persistent bottom nav replacing hamburger menu
+   
+   Structure: Home | Add | Search | Profile
+   Dark theme with white SVG icons
+   
+   File: src/css/global-nav.css
+   Version: 2.0
+   ============================================== */
+
+:root {
+  /* Bottom nav variables - dark theme */
+  --bottom-nav-height: 64px;
+  --bottom-nav-bg: #1a1a1a;
+  --bottom-nav-border: #333333;
+  --bottom-nav-text: #9ca3af;
+  --bottom-nav-text-active: #ffffff;
+  --bottom-nav-icon-size: 24px;
+  --bottom-nav-profile-signed-in: #4CAF50;
+}
+
+/* ==============================================
+   BOTTOM NAVIGATION BAR
+   ============================================== */
+
+.global-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-nav-height);
+  background: var(--bottom-nav-bg);
+  border-top: 1px solid var(--bottom-nav-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  z-index: 1020;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+}
+
+/* Hidden state for fullscreen mode */
+.global-bottom-nav.hidden {
+  transform: translateY(100%);
+}
+
+/* ==============================================
+   NAV ITEMS (Home, Profile)
+   ============================================== */
+
+.global-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 80px;
+  height: 100%;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  color: var(--bottom-nav-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.global-nav-item:hover {
+  color: var(--bottom-nav-text-active);
+}
+
+.global-nav-item.active {
+  color: var(--bottom-nav-text-active);
+}
+
+.global-nav-item .nav-icon {
+  width: var(--bottom-nav-icon-size);
+  height: var(--bottom-nav-icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-nav-item .nav-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.global-nav-item .nav-label {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70px;
+}
+
+/* Profile signed-in state */
+.global-nav-item.signed-in {
+  color: var(--bottom-nav-profile-signed-in);
+}
+
+.global-nav-item.signed-in .nav-icon svg {
+  fill: var(--bottom-nav-profile-signed-in);
+}
+
+/* Active indicator dot */
+.global-nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: var(--bottom-nav-text-active);
+  border-radius: 50%;
+}
+
+.global-nav-item.signed-in.active::after {
+  background: var(--bottom-nav-profile-signed-in);
+}
+
+/* ==============================================
+   CENTER NAV ITEMS (Add / Search)
+   Now styled the same as Home/Profile
+   ============================================== */
+
+/* No special styling needed - they use .global-nav-item class */
+
+/* ==============================================
+   ACTION SHEET (for Add/Search options)
+   ============================================== */
+
+.action-sheet-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 10000;
+}
+
+.action-sheet-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.action-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  z-index: 10001;
+}
+
+.action-sheet-overlay.active .action-sheet {
+  transform: translateY(0);
+}
+
+.action-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.action-sheet-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.action-sheet-close {
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-sheet-close:hover {
+  color: #ffffff;
+}
+
+.action-sheet-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-sheet-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.action-sheet-option:hover {
+  background: #333333;
+}
+
+.action-sheet-option:active {
+  transform: scale(0.98);
+}
+
+.action-sheet-option .option-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--bottom-nav-fab-bg);
+  color: #ffffff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-sheet-option .option-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.action-sheet-option .option-content {
+  flex: 1;
+}
+
+.action-sheet-option .option-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.action-sheet-option .option-desc {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Trail option - green */
+.action-sheet-option.trail .option-icon {
+  background: #4CAF50;
+}
+
+/* Report option - orange */
+.action-sheet-option.report .option-icon {
+  background: #FF9800;
+}
+
+/* Search trails - blue */
+.action-sheet-option.search-trails .option-icon {
+  background: #2196F3;
+}
+
+/* Search reports - purple */
+.action-sheet-option.search-reports .option-icon {
+  background: #9C27B0;
+}
+
+/* ==============================================
+   PAGE CONTENT OFFSET
+   Add padding to prevent content hiding behind nav
+   ============================================== */
+
+body.has-bottom-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0));
+}
+
+/* On tracker page, different handling - map fills screen */
+body.tracker-page.has-bottom-nav {
+  padding-bottom: 0;
+}
+
+/* Adjust floating elements above bottom nav */
+body.has-bottom-nav .sos-button,
+body.has-bottom-nav #sosButton {
+  bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom, 0)) !important;
+  right: 20px !important;
+}
+
+/* Beta feedback button positioned to the left of SOS */
+body.has-bottom-nav .feedback-fab,
+body.has-bottom-nav .beta-feedback-btn,
+body.has-bottom-nav #betaFeedbackBtn {
+  bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom, 0)) !important;
+  right: 90px !important;
+}
+
+/* ==============================================
+   HIDE TOP NAV HAMBURGER ON MOBILE
+   (Replaced by bottom nav)
+   ============================================== */
+
+@media (max-width: 768px) {
+  body.has-bottom-nav .menu-toggle {
+    display: none !important;
+  }
+  
+  body.has-bottom-nav .nav-menu {
+    display: none !important;
+  }
+  
+  /* Keep brand visible in top nav */
+  body.has-bottom-nav .top-nav {
+    justify-content: center;
+  }
+  
+  /* Hide auth indicator in top nav (now in bottom nav profile) */
+  body.has-bottom-nav .auth-status {
+    display: none !important;
+  }
+}
+
+/* ==============================================
+   DESKTOP: Show traditional top nav instead
+   ============================================== */
+
+@media (min-width: 769px) {
+  .global-bottom-nav {
+    display: none;
+  }
+  
+  body.has-bottom-nav {
+    padding-bottom: 0;
+  }
+}
+
+/* ==============================================
+   HIGH CONTRAST MODE
+   ============================================== */
+
+.high-contrast .global-bottom-nav {
+  border-top: 2px solid #ffffff;
+}
+
+.high-contrast .global-nav-item.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* ==============================================
+   REDUCED MOTION
+   ============================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .action-sheet-overlay,
+  .action-sheet,
+  .global-bottom-nav {
+    transition: none;
+  }
+}

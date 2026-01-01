@@ -1,0 +1,900 @@
+/**
+ * PWA Styles
+ * Access Nature - Install Banner, Offline UI, Sync Indicators
+ */
+
+/* ========== Install Banner ========== */
+.pwa-install-banner {
+  position: fixed;
+  bottom: -150px;
+  left: 16px;
+  right: 16px;
+  max-width: 500px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 9997;
+  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pwa-install-banner.visible {
+  bottom: 16px;
+}
+
+.install-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.install-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.install-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.install-text strong {
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.install-text span {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.install-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #2c5530, #4a7c59);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.install-btn:hover {
+  background: linear-gradient(135deg, #1e3a21, #2c5530);
+  transform: translateY(-1px);
+}
+
+.install-dismiss {
+  width: 32px;
+  height: 32px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.install-dismiss:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* ========== Sync Status Indicator ========== */
+.sync-indicator {
+  position: fixed;
+  top: 70px;
+  right: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9990;
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+}
+
+.sync-indicator.visible {
+  transform: translateX(0);
+}
+
+.sync-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #2c5530;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.sync-indicator-text {
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.sync-indicator.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.sync-indicator.success .sync-spinner {
+  display: none;
+}
+
+.sync-indicator.success::before {
+  content: '✓';
+  color: #22c55e;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.sync-indicator.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.sync-indicator.error .sync-spinner {
+  display: none;
+}
+
+.sync-indicator.error::before {
+  content: '✗';
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* ========== Pending Sync Badge ========== */
+.pending-sync-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #f59e0b;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  animation: pendingPulse 2s infinite;
+}
+
+@keyframes pendingPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ========== Offline Maps Panel ========== */
+.offline-maps-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.offline-maps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.offline-maps-header h3 {
+  font-size: 1.1rem;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offline-maps-status {
+  font-size: 0.8rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.offline-maps-status .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.offline-maps-status .status-dot.warning {
+  background: #f59e0b;
+}
+
+.offline-maps-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.offline-maps-btn {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.offline-maps-btn.primary {
+  background: #2c5530;
+  color: white;
+}
+
+.offline-maps-btn.primary:hover {
+  background: #1e3a21;
+}
+
+.offline-maps-btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.offline-maps-btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.offline-maps-btn.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.offline-maps-btn.danger:hover {
+  background: #fee2e2;
+}
+
+/* Download Progress */
+.download-progress {
+  margin-top: 16px;
+  display: none;
+}
+
+.download-progress.active {
+  display: block;
+}
+
+.download-progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2c5530, #4a7c59);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.download-progress-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Cached Regions List */
+.cached-regions {
+  margin-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+}
+
+.cached-regions h4 {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.cached-region-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.cached-region-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cached-region-icon {
+  font-size: 1.2rem;
+}
+
+.cached-region-name {
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.cached-region-size {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.cached-region-remove {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.cached-region-remove:hover {
+  color: #dc2626;
+}
+
+/* ========== Update Available Banner ========== */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10000;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.update-banner.visible {
+  transform: translateY(0);
+}
+
+.update-banner-text {
+  font-size: 0.9rem;
+}
+
+.update-banner-btn {
+  padding: 8px 16px;
+  background: white;
+  color: #1d4ed8;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.update-banner-btn:hover {
+  background: #f0f9ff;
+}
+
+.update-banner-dismiss {
+  background: none;
+  border: none;
+  color: white;
+  opacity: 0.8;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+}
+
+.update-banner-dismiss:hover {
+  opacity: 1;
+}
+
+/* ========== Cache Storage Info ========== */
+.cache-storage-info {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.cache-storage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cache-storage-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cache-storage-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cache-storage-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cache-storage-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.cache-storage-item-name {
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cache-storage-item-size {
+  color: #374151;
+  font-weight: 500;
+}
+
+/* ========== Mobile Responsive ========== */
+@media (max-width: 600px) {
+  .pwa-install-banner {
+    left: 10px;
+    right: 10px;
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .install-content {
+    flex: 1 1 100%;
+    margin-bottom: 8px;
+  }
+  
+  .install-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+  
+  .sync-indicator {
+    top: auto;
+    bottom: 80px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .offline-maps-panel {
+    margin: 10px;
+    padding: 16px;
+  }
+}
+
+/* ========== High Contrast Mode ========== */
+.high-contrast .pwa-install-banner {
+  border: 3px solid #000;
+}
+
+.high-contrast .install-btn {
+  background: #000;
+}
+
+.high-contrast .sync-indicator {
+  border: 2px solid #000;
+}
+
+.high-contrast .offline-maps-btn.primary {
+  background: #000;
+}
+
+/* ========== Reduced Motion ========== */
+.reduced-motion .pwa-install-banner {
+  transition: none;
+}
+
+.reduced-motion .sync-spinner {
+  animation: none;
+}
+
+.reduced-motion .pending-sync-badge {
+  animation: none;
+}
+
+/* ========== Enhanced Install Modal ========== */
+.pwa-install-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.pwa-install-modal.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.pwa-install-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.pwa-install-modal-content {
+  position: relative;
+  background: white;
+  border-radius: 20px;
+  max-width: 440px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: translateY(20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pwa-install-modal.visible .pwa-install-modal-content {
+  transform: translateY(0) scale(1);
+}
+
+.pwa-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.pwa-modal-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.pwa-modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pwa-app-icon {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #2c5530, #4a7c59);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 12px rgba(44, 85, 48, 0.3);
+}
+
+.pwa-modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px;
+}
+
+.pwa-modal-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.pwa-benefits {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.pwa-benefits h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pwa-benefits ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pwa-benefits li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.benefit-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pwa-benefits li div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pwa-benefits li strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pwa-benefits li span {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* iOS Instructions */
+.pwa-ios-instructions {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.pwa-ios-instructions h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin: 0 0 16px;
+}
+
+.pwa-ios-instructions ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pwa-ios-instructions li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.step-number {
+  width: 28px;
+  height: 28px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-content strong {
+  font-size: 0.9rem;
+  color: #1e40af;
+}
+
+.step-content span {
+  font-size: 0.8rem;
+  color: #3b82f6;
+}
+
+.step-icon {
+  margin-top: 8px;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  font-size: 1.25rem;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.step-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Modal Actions */
+.pwa-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pwa-install-now {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #2c5530, #4a7c59);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.pwa-install-now:hover {
+  background: linear-gradient(135deg, #1e3a21, #2c5530);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 85, 48, 0.3);
+}
+
+.pwa-install-now .btn-icon {
+  font-size: 1.2rem;
+}
+
+.pwa-install-skip {
+  width: 100%;
+  padding: 12px 24px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pwa-install-skip:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.pwa-modal-note {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Install Banner Updates */
+.install-later {
+  padding: 8px 12px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.install-later:hover {
+  background: #f3f4f6;
+}
+
+/* Mobile adjustments for modal */
+@media (max-width: 480px) {
+  .pwa-install-modal-content {
+    padding: 20px;
+    border-radius: 16px;
+    margin: 8px;
+  }
+  
+  .pwa-app-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+  
+  .pwa-modal-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .pwa-benefits {
+    padding: 12px;
+  }
+  
+  .pwa-ios-instructions {
+    padding: 12px;
+  }
+}
+
+/* High contrast for modal */
+.high-contrast .pwa-install-modal-content {
+  border: 2px solid #000;
+}
+
+.high-contrast .pwa-install-now {
+  background: #000;
+}
+
+.high-contrast .pwa-install-skip {
+  border-color: #000;
+  color: #000;
+}
+
+/* Reduced motion for modal */
+.reduced-motion .pwa-install-modal,
+.reduced-motion .pwa-install-modal-content {
+  transition: none;
+}

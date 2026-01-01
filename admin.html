@@ -1,0 +1,3603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Nature - Admin Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/global-nav.css">
+  
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+      } catch(e) {}
+    })();
+  </script>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e3a2f, #2c5530);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    .header h1 { font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .user-info { font-size: 0.85em; opacity: 0.9; }
+    
+    .connection-status {
+      font-size: 0.75em;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.15);
+    }
+    .connection-status.online { color: #86efac; }
+    .connection-status.offline { color: #fca5a5; background: rgba(239,68,68,0.2); }
+    
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .action-btn {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #2c5530;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      background: #dcfce7;
+      border-color: #86efac;
+    }
+    .load-status {
+      font-size: 0.85em;
+      color: #6b7280;
+    }
+    .admin-badge { background: #fbbf24; color: #1e3a2f; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 700; }
+    
+    .header-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.25); }
+    
+    /* Container */
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    
+    /* Login */
+    .login-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e3a2f, #2c5530);
+    }
+    
+    .login-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .login-card h2 { text-align: center; color: #1e3a2f; margin-bottom: 8px; }
+    .login-subtitle { text-align: center; color: #6b7280; margin-bottom: 24px; font-size: 0.9em; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 0.9em; }
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { outline: none; border-color: #2c5530; }
+    
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: #2c5530;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .login-btn:hover { background: #3d6b41; }
+    .login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    
+    .login-error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 0.9em;
+      display: none;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+    
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 3px solid transparent;
+    }
+    
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .stat-card.active { border-color: #2c5530; }
+    
+    .stat-card .icon { font-size: 36px; margin-bottom: 8px; }
+    .stat-card .count { font-size: 2.2em; font-weight: 700; color: #1f2937; }
+    .stat-card .label { color: #6b7280; font-size: 0.95em; margin-top: 4px; }
+    
+    /* Loading Spinner */
+    .spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #2c5530;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .stat-card .count .spinner {
+      width: 28px;
+      height: 28px;
+      border-width: 4px;
+    }
+    
+    /* Filters Card */
+    .filters-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .filters-title { font-weight: 600; margin-bottom: 16px; color: #374151; }
+    
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    
+    .filter-group label { display: block; font-size: 0.8em; color: #6b7280; margin-bottom: 4px; font-weight: 500; }
+    .filter-group input, .filter-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+    
+    .filter-buttons { display: flex; gap: 8px; }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary { background: #2c5530; color: white; }
+    .btn-primary:hover { background: #3d6b41; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8em; }
+    
+    /* Data Card */
+    .data-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    
+    .data-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .data-header h3 { font-size: 1.1em; color: #1f2937; }
+    .count-badge { background: #e5e7eb; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; color: #6b7280; margin-left: 8px; }
+    
+    .data-actions { display: flex; gap: 8px; }
+    
+    /* Table */
+    .table-container { overflow-x: auto; }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+    
+    .data-table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: #f9fafb;
+      font-size: 0.8em;
+      color: #6b7280;
+      font-weight: 600;
+      text-transform: uppercase;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .data-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 0.9em;
+    }
+    
+    .data-table tr:hover { background: #f9fafb; }
+    
+    .truncate {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .action-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      margin-right: 4px;
+    }
+    
+    .action-btn:hover { opacity: 0.8; }
+    .action-btn.view { background: #dbeafe; color: #1e40af; }
+    .action-btn.edit { background: #fef3c7; color: #92400e; }
+    .action-btn.delete { background: #fee2e2; color: #991b1b; }
+    
+    /* Owner Cell */
+    .owner-cell { display: flex; flex-direction: column; gap: 2px; }
+    .owner-name { font-weight: 600; color: #1f2937; }
+    .owner-email { font-size: 0.8em; color: #6b7280; }
+    .owner-id { font-size: 0.7em; color: #9ca3af; font-family: monospace; }
+    
+    /* Tags */
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 600; }
+    .tag-public { background: #d1fae5; color: #065f46; }
+    .tag-private { background: #fee2e2; color: #991b1b; }
+    
+    /* Empty State */
+    .empty-state { padding: 60px 20px; text-align: center; color: #6b7280; }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+    
+    /* Loading */
+    .loading { padding: 40px; text-align: center; color: #6b7280; }
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #2c5530;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      overflow-y: auto;
+      backdrop-filter: blur(4px);
+    }
+    
+    .modal-overlay.active { display: flex; }
+    
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 900px;
+      margin: 20px auto;
+      overflow: hidden;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+    
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #2c5530, #4a7c59);
+      color: white;
+    }
+    
+    .modal-header h3 { font-size: 1.2em; }
+    
+    .modal-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.3); }
+    
+    .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+    
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      background: #f9fafb;
+    }
+    
+    /* Tabs inside modal */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 20px;
+    }
+    
+    .modal-tab {
+      padding: 12px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    
+    .modal-tab:hover { color: #2c5530; }
+    .modal-tab.active { color: #2c5530; border-bottom-color: #2c5530; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Form Fields */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+    
+    .form-field { margin-bottom: 16px; }
+    .form-field label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 0.9em; }
+    .form-field input, .form-field textarea, .form-field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95em;
+    }
+    .form-field input:focus, .form-field textarea:focus, .form-field select:focus {
+      outline: none;
+      border-color: #2c5530;
+    }
+    .form-field textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+    .form-field .help-text { font-size: 0.8em; color: #6b7280; margin-top: 4px; }
+    
+    /* Section Headers in Edit */
+    .section-header {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 20px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .section-header:hover { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+    .section-header .icon { font-size: 1.5em; }
+    .section-header .title { font-weight: 600; color: #166534; }
+    .section-header .arrow { margin-left: auto; color: #166534; transition: transform 0.2s; }
+    .section-header.collapsed .arrow { transform: rotate(-90deg); }
+    
+    .section-content { display: block; padding-left: 8px; }
+    .section-content.collapsed { display: none; }
+    
+    /* Card Selection Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    
+    .select-card {
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .select-card:hover { border-color: #4a7c59; background: #f0fdf4; }
+    .select-card.selected { border-color: #2c5530; background: #2c5530; color: white; }
+    .select-card .card-icon { font-size: 1.5em; display: block; margin-bottom: 4px; }
+    .select-card .card-label { font-size: 0.8em; font-weight: 600; }
+    
+    /* Chip Selection */
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .chip {
+      padding: 8px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      font-size: 0.85em;
+    }
+    
+    .chip:hover { border-color: #4a7c59; }
+    .chip.selected { border-color: #2c5530; background: #2c5530; color: white; }
+    
+    /* Checkbox styled */
+    .styled-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .styled-checkbox:hover { border-color: #4a7c59; }
+    .styled-checkbox.checked { border-color: #2c5530; background: #f0fdf4; }
+    .styled-checkbox .check-box {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: transparent;
+    }
+    .styled-checkbox.checked .check-box { background: #2c5530; border-color: #2c5530; color: white; }
+    
+    /* Photos Grid */
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    
+    .photo-card {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #f3f4f6;
+    }
+    
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .photo-card .photo-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+    }
+    
+    .photo-card .photo-btn {
+      background: rgba(0,0,0,0.6);
+      color: white;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .photo-card .photo-btn:hover { background: rgba(0,0,0,0.8); }
+    
+    .add-photo-card {
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+    }
+    
+    .add-photo-card:hover { border-color: #2c5530; background: #f0fdf4; }
+    .add-photo-card .icon { font-size: 2em; color: #9ca3af; }
+    .add-photo-card .text { font-size: 0.85em; color: #6b7280; margin-top: 8px; }
+    
+    /* Preview Card */
+    .preview-card {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .preview-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .preview-icon { font-size: 3em; }
+    .preview-title { font-size: 1.3em; font-weight: 700; color: #1e3a2f; }
+    .preview-subtitle { color: #6b7280; font-size: 0.9em; }
+    
+    .preview-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .preview-stat {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .preview-stat .value { font-size: 1.5em; font-weight: 700; color: #2c5530; }
+    .preview-stat .label { font-size: 0.8em; color: #6b7280; }
+    
+    /* Accessibility Banner */
+    .access-banner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .access-banner.accessible { background: linear-gradient(135deg, #d1fae5, #a7f3d0); }
+    .access-banner.partial { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    .access-banner.not-accessible { background: linear-gradient(135deg, #fee2e2, #fecaca); }
+    
+    .access-banner .icon { font-size: 2.5em; }
+    .access-banner .level { font-weight: 700; font-size: 1.1em; }
+    .access-banner .desc { font-size: 0.85em; color: #374151; }
+    
+    /* JSON View */
+    .json-preview {
+      background: #1f2937;
+      color: #10b981;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.75em;
+      max-height: 400px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    /* Map Container */
+    .map-container {
+      height: 300px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 16px 0;
+      border: 2px solid #e5e7eb;
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 1001;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
+    .toast.info { background: #3b82f6; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* Section visibility */
+    .section { display: none; }
+    .section.active { display: block; }
+    
+    /* Pagination */
+    .pagination {
+      padding: 16px 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .pagination-info { color: #6b7280; font-size: 0.9em; }
+    
+    /* Owner Info Box */
+    .owner-info-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .owner-info-box h4 { font-size: 0.9em; color: #64748b; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .owner-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    .owner-info-item { }
+    .owner-info-item .label { font-size: 0.8em; color: #94a3b8; }
+    .owner-info-item .value { font-weight: 600; color: #1e293b; word-break: break-all; }
+    
+    /* ==========================================
+       RESPONSIVE STYLES FOR SMALL SCREENS
+       ========================================== */
+    @media (max-width: 530px) {
+      /* Header adjustments */
+      .header {
+        padding: 12px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .header h1 {
+        font-size: 1rem;
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .header-actions {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .user-info {
+        font-size: 0.75em;
+        text-align: center;
+        width: 100%;
+      }
+      
+      .admin-badge {
+        font-size: 0.65em;
+        padding: 2px 6px;
+      }
+      
+      .header-btn {
+        padding: 6px 10px;
+        font-size: 0.75em;
+      }
+      
+      /* Container adjustments */
+      .container {
+        padding: 12px;
+      }
+      
+      /* Quick actions */
+      .quick-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .action-btn {
+        padding: 6px 10px;
+        font-size: 0.8em;
+        flex: 1 1 45%;
+        text-align: center;
+      }
+      
+      /* Stats cards */
+      .stat-card {
+        padding: 12px;
+      }
+      
+      .stat-card .icon {
+        font-size: 24px;
+      }
+      
+      .stat-card .count {
+        font-size: 1.5em;
+      }
+      
+      .stat-card .label {
+        font-size: 0.8em;
+      }
+      
+      /* Filters */
+      .filters-card {
+        padding: 12px;
+      }
+      
+      .filters-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .filter-group {
+        min-width: 100%;
+      }
+      
+      /* Tabs */
+      .tabs {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      
+      .tab {
+        padding: 8px 12px;
+        font-size: 0.8em;
+        flex: 1 1 45%;
+        text-align: center;
+      }
+      
+      /* Data table */
+      .data-table th,
+      .data-table td {
+        padding: 8px 6px;
+        font-size: 0.8em;
+      }
+      
+      .data-table .actions {
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .data-table .actions button {
+        font-size: 0.75em;
+        padding: 4px 8px;
+      }
+      
+      /* Modal adjustments */
+      .modal-content {
+        width: 98%;
+        max-width: none;
+        margin: 8px;
+        max-height: 95vh;
+      }
+      
+      .modal-header {
+        padding: 12px;
+      }
+      
+      .modal-header h2 {
+        font-size: 1rem;
+      }
+      
+      .modal-body {
+        padding: 12px;
+      }
+      
+      .modal-footer {
+        padding: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .modal-footer .btn {
+        flex: 1 1 45%;
+        text-align: center;
+      }
+      
+      .modal-tabs {
+        flex-wrap: wrap;
+      }
+      
+      .modal-tab {
+        padding: 8px 12px;
+        font-size: 0.85em;
+        flex: 1;
+        text-align: center;
+      }
+      
+      /* Form fields */
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .form-field label {
+        font-size: 0.85em;
+      }
+      
+      .form-field input,
+      .form-field textarea,
+      .form-field select {
+        padding: 8px 10px;
+        font-size: 0.9em;
+      }
+      
+      /* Card grid */
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      
+      .select-card {
+        padding: 8px;
+        font-size: 0.8em;
+      }
+      
+      /* Section headers */
+      .section-header {
+        padding: 10px 12px;
+      }
+      
+      .section-header .icon {
+        font-size: 1.2em;
+      }
+      
+      .section-header .title {
+        font-size: 0.9em;
+      }
+      
+      /* Toast adjustments */
+      .toast {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        font-size: 0.85em;
+      }
+      
+      /* Owner info */
+      .owner-info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      /* Pagination */
+      .pagination {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+    }
+    
+    /* High contrast toggle - circular button style */
+    .high-contrast-toggle {
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0));
+      left: 20px;
+      z-index: 9999;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: rgba(26, 26, 26, 0.95);
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .high-contrast-toggle .toggle-text {
+      display: none;
+    }
+    
+    .high-contrast-toggle .toggle-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Add bottom padding for bottom nav */
+    body.has-bottom-nav {
+      padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0));
+    }
+    
+    /* Hide login section bottom nav adjustment */
+    body.has-bottom-nav .login-section {
+      min-height: calc(100vh - var(--bottom-nav-height, 64px));
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Section -->
+  <div class="login-section" id="loginSection">
+    <div class="login-card">
+      <h1>🔐 Admin Dashboard</h1>
+      <p class="login-subtitle">Access Nature Management Console</p>
+      <form id="loginForm" onsubmit="return false;" autocomplete="on">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" name="email" placeholder="admin@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" name="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
+      </form>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainApp" style="display: none;">
+    <!-- High Contrast Toggle -->
+    <button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode" aria-pressed="false">
+      <span class="toggle-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z"/>
+        </svg>
+      </span>
+      <span class="toggle-text">High Contrast</span>
+    </button>
+    
+    <!-- Header -->
+    <div class="header">
+      <h1>🌲 Access Nature <span class="admin-badge">ADMIN</span></h1>
+      <div class="header-actions">
+        <span class="connection-status online" id="connectionStatus">🟢 Online</span>
+        <span class="user-info" id="userInfo"></span>
+        <button class="header-btn" onclick="window.location.href='tracker.html'">🗺️ Tracker</button>
+        <button class="header-btn" onclick="signOutUser()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card active" data-section="routes" onclick="switchSection('routes')">
+          <div class="icon">🗺️</div>
+          <div class="count" id="routesCount">-</div>
+          <div class="label">Routes</div>
+        </div>
+        <div class="stat-card" data-section="guides" onclick="switchSection('guides')">
+          <div class="icon">📚</div>
+          <div class="count" id="guidesCount">-</div>
+          <div class="label">Trail Guides</div>
+        </div>
+        <div class="stat-card" data-section="conditions" onclick="switchSection('conditions')">
+          <div class="icon">🚧</div>
+          <div class="count" id="conditionsCount">-</div>
+          <div class="label">Trail Conditions</div>
+        </div>
+        <div class="stat-card" data-section="reports" onclick="switchSection('reports')">
+          <div class="icon">♿</div>
+          <div class="count" id="reportsCount">-</div>
+          <div class="label">Accessibility Reports</div>
+        </div>
+        <div class="stat-card" data-section="settings" onclick="switchSection('settings')">
+          <div class="icon">⚙️</div>
+          <div class="count">—</div>
+          <div class="label">Settings</div>
+        </div>
+        <div class="stat-card" data-section="feedback" onclick="switchSection('feedback')">
+          <div class="icon">💬</div>
+          <div class="count" id="feedbackCount">-</div>
+          <div class="label">Beta Feedback</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="action-btn" onclick="loadAllData()" title="Reload all data (tries server first)">
+          🔄 Reload All
+        </button>
+        <button class="action-btn" onclick="clearCacheAndReload()" title="Clear local cache and reload from server" style="background:#fef3c7;border-color:#fcd34d;">
+          🗑️ Clear Cache
+        </button>
+        <span class="load-status" id="loadStatus"></span>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-card">
+        <div class="filters-title">🔍 Search & Filter</div>
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label>Search</label>
+            <input type="text" id="filterSearch" placeholder="Name, trail, location...">
+          </div>
+          <div class="filter-group">
+            <label for="filterDateFrom">Date From</label>
+            <input type="date" id="filterDateFrom">
+          </div>
+          <div class="filter-group">
+            <label for="filterDateTo">Date To</label>
+            <input type="date" id="filterDateTo">
+          </div>
+          <div class="filter-group">
+            <label>Owner</label>
+            <select id="filterOwner">
+              <option value="all">All Users</option>
+              <option value="mine">My Items</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Sort By</label>
+            <select id="filterSortOrder" onchange="applyFilters()">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+            </select>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn btn-primary" onclick="applyFilters()">🔍 Search</button>
+            <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Routes Section -->
+      <div class="section active" id="routesSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>🗺️ Routes <span class="count-badge" id="routesFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('routes')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('routes')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="routesTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guides Section -->
+      <div class="section" id="guidesSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>📚 Trail Guides <span class="count-badge" id="guidesFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('guides')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('guides')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="guidesTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conditions Section -->
+      <div class="section" id="conditionsSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>🚧 Trail Conditions <span class="count-badge" id="conditionsFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('conditions')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('conditions')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="conditionsTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Section -->
+      <div class="section" id="reportsSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>♿ Accessibility Reports <span class="count-badge" id="reportsFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <button class="btn btn-secondary btn-sm" onclick="exportSection('reports')">📥 Export</button>
+              <button class="btn btn-primary btn-sm" onclick="refreshSection('reports')">🔄 Refresh</button>
+            </div>
+          </div>
+          <div class="table-container" id="reportsTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Settings Section -->
+      <div class="section" id="settingsSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>⚙️ App Settings</h3>
+          </div>
+          
+          <div style="padding: 20px;">
+            <!-- EmailJS Configuration -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <h4 style="margin: 0 0 8px 0; color: #166534;">📧 EmailJS Configuration</h4>
+              <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 0.9rem;">
+                Configure EmailJS to enable automatic email notifications for Lifeline safety feature and route backups.
+              </p>
+              
+              <div style="display: grid; gap: 12px;">
+                <div>
+                  <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Public Key</label>
+                  <input type="text" id="emailjsPublicKey" placeholder="e.g., abc123XYZ..." 
+                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                  <small style="color: #6b7280;">Found in EmailJS Dashboard → Account → API Keys</small>
+                </div>
+                
+                <div>
+                  <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Service ID</label>
+                  <input type="text" id="emailjsServiceId" placeholder="e.g., service_abc123" 
+                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                  <small style="color: #6b7280;">Found in EmailJS Dashboard → Email Services</small>
+                </div>
+                
+                <div>
+                  <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Template ID</label>
+                  <input type="text" id="emailjsTemplateId" placeholder="e.g., template_xyz789" 
+                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;">
+                  <small style="color: #6b7280;">Found in EmailJS Dashboard → Email Templates</small>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                  <button class="btn btn-primary" onclick="saveEmailJSSettings()">💾 Save Settings</button>
+                  <button class="btn btn-secondary" onclick="testEmailJS()">🧪 Test Connection</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- EmailJS Setup Guide -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px;">
+              <h4 style="margin: 0 0 12px 0; color: #1e40af;">📖 How to Set Up EmailJS</h4>
+              <ol style="margin: 0; padding-left: 20px; color: #374151; line-height: 1.8;">
+                <li>Go to <a href="https://www.emailjs.com/" target="_blank" style="color: #2563eb;">emailjs.com</a> and create a free account</li>
+                <li>Add an <strong>Email Service</strong> (Gmail, Outlook, etc.) and verify it</li>
+                <li>Create an <strong>Email Template</strong> with these variables:
+                  <ul style="margin: 8px 0; padding-left: 20px;">
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{to_email}}</code> - Recipient email</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{to_name}}</code> - Recipient name</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{from_name}}</code> - Sender name</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{subject}}</code> - Email subject</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{message}}</code> - Full message body</li>
+                    <li><code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">{{maps_url}}</code> - Google Maps link</li>
+                  </ul>
+                </li>
+                <li>Copy your <strong>Public Key</strong> from Account → API Keys</li>
+                <li>Copy your <strong>Service ID</strong> and <strong>Template ID</strong> from their respective sections</li>
+                <li>Paste them above and click "Save Settings"</li>
+              </ol>
+              <p style="margin: 12px 0 0 0; padding: 10px; background: #fef3c7; border-radius: 8px; font-size: 0.9rem;">
+                ⚠️ <strong>Free tier:</strong> 200 emails/month. For more, upgrade your EmailJS plan.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Feedback Section -->
+      <div class="section" id="feedbackSection">
+        <div class="data-card">
+          <div class="data-header">
+            <h3>💬 Beta Feedback <span class="count-badge" id="feedbackFilteredCount">0</span></h3>
+            <div class="data-actions">
+              <select id="feedbackStatusFilter" onchange="filterFeedback()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db;">
+                <option value="all">All Status</option>
+                <option value="new">🆕 New</option>
+                <option value="reviewing">👀 Reviewing</option>
+                <option value="resolved">✅ Resolved</option>
+                <option value="wontfix">⏭️ Won't Fix</option>
+              </select>
+              <select id="feedbackCategoryFilter" onchange="filterFeedback()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db;">
+                <option value="all">All Categories</option>
+                <option value="bug">🐛 Bugs</option>
+                <option value="feature">💡 Features</option>
+                <option value="general">💭 General</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="loadFeedback()">🔄 Refresh</button>
+            </div>
+          </div>
+          
+          <!-- Feedback Stats -->
+          <div style="display: flex; gap: 16px; padding: 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap;">
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;" id="feedbackNewCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">New</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #f59e0b;" id="feedbackReviewingCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">Reviewing</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;" id="feedbackResolvedCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">Resolved</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #ef4444;" id="feedbackBugCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">🐛 Bugs</div>
+            </div>
+            <div style="text-align: center; padding: 8px 16px;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;" id="feedbackFeatureCount">0</div>
+              <div style="font-size: 0.8rem; color: #6b7280;">💡 Features</div>
+            </div>
+          </div>
+          
+          <div class="table-container" id="feedbackTableContainer">
+            <div class="loading"><div class="spinner"></div><p>Loading feedback...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View/Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="editModalTitle">Edit Item</h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      
+      <!-- Modal Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="preview" onclick="switchModalTab('preview')">👁️ Preview</button>
+        <button class="modal-tab" data-tab="details" onclick="switchModalTab('details')">📝 Details</button>
+        <button class="modal-tab" data-tab="accessibility" onclick="switchModalTab('accessibility')">♿ Accessibility</button>
+        <button class="modal-tab" data-tab="photos" onclick="switchModalTab('photos')">📷 Photos</button>
+        <button class="modal-tab" data-tab="json" onclick="switchModalTab('json')">{ } JSON</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Preview Tab -->
+        <div class="tab-content active" id="tab-preview"></div>
+        
+        <!-- Details Tab -->
+        <div class="tab-content" id="tab-details"></div>
+        
+        <!-- Accessibility Tab -->
+        <div class="tab-content" id="tab-accessibility"></div>
+        
+        <!-- Photos Tab -->
+        <div class="tab-content" id="tab-photos"></div>
+        
+        <!-- JSON Tab -->
+        <div class="tab-content" id="tab-json"></div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="deleteCurrentItem()">🗑️ Delete</button>
+        <button class="btn btn-primary" onclick="saveCurrentItem()">💾 Save to Cloud</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3>⚠️ Confirm Delete</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteMessage">Are you sure you want to delete this item?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for photo upload -->
+  <input type="file" id="photoUploadInput" accept="image/*" multiple style="display: none;">
+
+  <!-- Firebase & App Logic -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script type="module">
+    import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, getDocsFromServer, updateDoc, deleteDoc, Timestamp, enableIndexedDbPersistence, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js';
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
+      authDomain: "accessnaturebeta-821a2.firebaseapp.com",
+      projectId: "accessnaturebeta-821a2",
+      storageBucket: "accessnaturebeta-821a2.appspot.com",
+      messagingSenderId: "670888101781",
+      appId: "1:670888101781:web:b4cf57f58e86182466589c"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    
+    // Enable offline persistence
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('⚠️ Persistence failed: Multiple tabs open');
+      } else if (err.code === 'unimplemented') {
+        console.warn('⚠️ Persistence not available in this browser');
+      }
+    });
+
+    const ADMIN_EMAIL = 'liorshur@gmail.com';
+    
+    // Connection status
+    let isOnline = navigator.onLine;
+    window.addEventListener('online', () => { isOnline = true; updateConnectionStatus(); });
+    window.addEventListener('offline', () => { isOnline = false; updateConnectionStatus(); });
+    
+    function updateConnectionStatus() {
+      const indicator = document.getElementById('connectionStatus');
+      if (indicator) {
+        indicator.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
+        indicator.textContent = isOnline ? '🟢 Online' : '🔴 Offline';
+      }
+    }
+
+    // State
+    let currentUser = null;
+    let currentSection = 'routes';
+    let editingItem = null;
+    let editingCollection = null;
+
+    // Data cache
+    const cache = { routes: [], guides: [], conditions: [], reports: [] };
+
+    const COLLECTIONS = {
+      routes: 'routes',
+      guides: 'trail_guides',
+      conditions: 'trail_conditions',
+      reports: 'accessibilityReports'
+    };
+
+    // Accessibility Survey Field Definitions
+    const ACCESSIBILITY_FIELDS = {
+      basic: {
+        title: '🗺️ Basic Trail Information',
+        fields: [
+          { name: 'trailName', label: 'Trail Name', type: 'text' },
+          { name: 'location', label: 'Location/Address', type: 'text' },
+          { name: 'trailLength', label: 'Trail Length (km)', type: 'number', step: '0.1' },
+          { name: 'estimatedTime', label: 'Estimated Duration', type: 'select', options: ['', 'Under 30 minutes', '30-60 minutes', '1-2 hours', '2-4 hours', 'Half day', 'Full day'] },
+          { name: 'tripType', label: 'Trip Type', type: 'chips', options: ['🏖️ Beach Promenade', '🌊 Stream Path', '🌳 Park Route', '🌲 Forest Trail', '🏙️ Urban Route', '🚗 Scenic Drive'] },
+          { name: 'routeType', label: 'Route Type', type: 'cards', options: [{ value: 'Circular', icon: '🔄', label: 'Circular Loop' }, { value: 'Round Trip', icon: '↔️', label: 'Round Trip' }] }
+        ]
+      },
+      mobility: {
+        title: '♿ Mobility Accessibility',
+        fields: [
+          { name: 'wheelchairAccess', label: 'Wheelchair Accessibility', type: 'cards', options: [
+            { value: 'Fully accessible', icon: '♿', label: 'Fully Accessible' },
+            { value: 'Partially accessible', icon: '⚠️', label: 'Partially' },
+            { value: 'Accessible with assistance', icon: '🤝', label: 'With Assistance' },
+            { value: 'Not accessible', icon: '🚫', label: 'Not Accessible' }
+          ]},
+          { name: 'disabledParking', label: 'Disabled Parking Available', type: 'checkbox' },
+          { name: 'parkingSpaces', label: 'Number of Accessible Parking Spaces', type: 'number' }
+        ]
+      },
+      surface: {
+        title: '🛤️ Trail Surface & Quality',
+        fields: [
+          { name: 'trailSurface', label: 'Surface Types', type: 'chips', multi: true, options: ['🛣️ Asphalt', '⬜ Concrete', '🪨 Stone', '🪵 Wood/Deck', '⚪ Compacted Gravel', '🔀 Mixed', '🌿 Grass'] },
+          { name: 'surfaceQuality', label: 'Surface Quality', type: 'cards', options: [
+            { value: 'Excellent', icon: '✨', label: 'Excellent' },
+            { value: 'Fair', icon: '👍', label: 'Fair' },
+            { value: 'Poor', icon: '⚠️', label: 'Poor' },
+            { value: 'Overgrown', icon: '🌿', label: 'Overgrown' }
+          ]},
+          { name: 'trailSlopes', label: 'Trail Slopes', type: 'cards', options: [
+            { value: 'Flat', icon: '➡️', label: 'Flat (<5%)' },
+            { value: 'Moderate', icon: '📐', label: 'Moderate (5-10%)' },
+            { value: 'Steep', icon: '⛰️', label: 'Steep (>10%)' }
+          ]}
+        ]
+      },
+      visual: {
+        title: '👁️ Visual & Environmental',
+        fields: [
+          { name: 'visualAdaptations', label: 'Visual Impairment Adaptations', type: 'chips', multi: true, options: ['Raised borders', 'Tactile surfaces', 'Color contrast'] },
+          { name: 'shadeCoverage', label: 'Shade Coverage', type: 'cards', options: [
+            { value: 'Plenty of shade', icon: '🌳', label: 'Plenty' },
+            { value: 'Intermittent shade', icon: '⛅', label: 'Intermittent' },
+            { value: 'No shade', icon: '☀️', label: 'No shade' }
+          ]},
+          { name: 'lighting', label: 'Trail is Lit in Darkness', type: 'checkbox' }
+        ]
+      },
+      facilities: {
+        title: '🚰 Facilities & Amenities',
+        fields: [
+          { name: 'waterFountains', label: 'Accessible Water Fountains', type: 'cards', options: [
+            { value: 'None', icon: '🚫', label: 'None' },
+            { value: 'One', icon: '🚰', label: 'One' },
+            { value: 'Multiple', icon: '🚰🚰', label: 'Multiple' }
+          ]},
+          { name: 'seating', label: 'Accessible Seating', type: 'chips', multi: true, options: ['No benches', 'One bench', 'Multiple benches', 'Without handrails'] },
+          { name: 'picnicAreas', label: 'Accessible Picnic Areas', type: 'checkbox' },
+          { name: 'picnicCount', label: 'Number of Picnic Areas', type: 'number' },
+          { name: 'accessibleViewpoint', label: 'Accessible Viewpoint', type: 'checkbox' },
+          { name: 'restrooms', label: 'Accessible Restrooms', type: 'cards', options: [
+            { value: 'None', icon: '🚫', label: 'None' },
+            { value: 'Unisex', icon: '🚻', label: 'Unisex' },
+            { value: 'Separate', icon: '🚹🚺', label: 'Separate M/F' }
+          ]}
+        ]
+      },
+      signage: {
+        title: '🪧 Signage & Navigation',
+        fields: [
+          { name: 'signage', label: 'Available Signage', type: 'chips', multi: true, options: ['🗺️ Route map', '➡️ Directional signs', '📖 Simple language', '🔤 High contrast', '🔊 Audio/T-mode'] },
+          { name: 'qrCode', label: 'QR Code with Site Info', type: 'checkbox' }
+        ]
+      },
+      additional: {
+        title: '📝 Additional Information',
+        fields: [
+          { name: 'additionalNotes', label: 'Additional Notes', type: 'textarea' },
+          { name: 'surveyorName', label: 'Surveyor Name', type: 'text' },
+          { name: 'surveyDate', label: 'Survey Date', type: 'date' },
+          { name: 'accessibilitySummary', label: 'Overall Accessibility', type: 'cards', options: [
+            { value: 'Accessible', icon: '✅', label: 'Accessible' },
+            { value: 'Partially accessible', icon: '⚠️', label: 'Partial' },
+            { value: 'Not accessible', icon: '❌', label: 'Not Accessible' }
+          ]}
+        ]
+      }
+    };
+
+    // ==================== AUTH ====================
+    
+    function isAdmin(user) {
+      return user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) {
+        if (!isAdmin(user)) {
+          showToast('Access denied - Admin only', 'error');
+          await signOut(auth);
+          return;
+        }
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userInfo').textContent = user.email;
+        await loadAllData();
+      } else {
+        document.getElementById('loginSection').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'none';
+      }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleLogin();
+    });
+
+    async function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const errorEl = document.getElementById('loginError');
+      
+      if (!email || !password) {
+        errorEl.textContent = 'Please enter email and password';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      try {
+        btn.textContent = 'Signing in...';
+        btn.disabled = true;
+        errorEl.style.display = 'none';
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        let msg = 'Login failed';
+        if (error.code === 'auth/invalid-credential') msg = 'Invalid email or password';
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.textContent = 'Sign In';
+        btn.disabled = false;
+      }
+    }
+
+    window.signOutUser = () => signOut(auth);
+
+    // ==================== DATA LOADING ====================
+
+    window.loadAllData = async function() {
+      const statusEl = document.getElementById('loadStatus');
+      statusEl.textContent = 'Loading...';
+      statusEl.style.color = '#6b7280';
+      
+      showToast('Loading data...', 'info');
+      
+      // Show spinning loaders on all counts
+      ['routes', 'guides', 'conditions', 'reports'].forEach(s => {
+        document.getElementById(`${s}Count`).innerHTML = '<span class="spinner"></span>';
+      });
+      
+      // Load sequentially to avoid overwhelming the connection
+      const results = [];
+      const sections = ['routes', 'guides', 'conditions', 'reports'];
+      
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        statusEl.textContent = `Loading ${section}... (${i + 1}/${sections.length})`;
+        console.log(`📥 Loading ${section}...`);
+        
+        const result = await loadCollectionWithRetry(section, 2);
+        results.push(result);
+        
+        // Update count immediately with visual feedback
+        const countEl = document.getElementById(`${section}Count`);
+        const count = cache[section].length;
+        countEl.textContent = count;
+        
+        if (result.success && count > 0) {
+          countEl.style.color = '#10b981'; // Green flash for success
+          setTimeout(() => { countEl.style.color = ''; }, 600);
+        } else if (!result.success) {
+          countEl.style.color = '#ef4444'; // Red for failure
+        }
+      }
+      
+      const failures = results.filter(r => !r.success);
+      const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
+      
+      updateAllCounts();
+      renderCurrentSection();
+      updateConnectionStatus();
+      
+      // Load feedback count separately (doesn't block main data)
+      loadFeedbackCount();
+      
+      // Update status
+      const timestamp = new Date().toLocaleTimeString();
+      
+      if (failures.length > 0) {
+        if (failures.length === 4) {
+          statusEl.textContent = `Failed at ${timestamp}`;
+          statusEl.style.color = '#ef4444';
+          showToast('Failed to load data. Check your connection.', 'error');
+        } else {
+          const failedSections = failures.map(f => f.section).join(', ');
+          statusEl.textContent = `Partial load at ${timestamp}`;
+          statusEl.style.color = '#f59e0b';
+          showToast(`Some sections failed: ${failedSections}`, 'error');
+        }
+      } else if (totalItems === 0) {
+        statusEl.textContent = `No data at ${timestamp}`;
+        statusEl.style.color = '#f59e0b';
+        showToast('⚠️ No data loaded. You may be offline.', 'error');
+        console.warn('⚠️ All collections returned 0 items - possible offline/connection issue');
+      } else {
+        // Check if any loaded from server vs cache
+        const serverLoads = results.filter(r => r.source === 'server').length;
+        const sourceInfo = serverLoads === 4 ? '(server)' : serverLoads > 0 ? '(mixed)' : '(cache)';
+        statusEl.textContent = `Updated ${timestamp} ${sourceInfo}`;
+        statusEl.style.color = '#10b981';
+        showToast(`Loaded ${totalItems} items from ${serverLoads === 4 ? 'server' : 'cache'}`, 'success');
+      }
+    }
+
+    async function loadCollectionWithRetry(section, maxRetries = 3) {
+      let lastError = null;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`📥 Loading ${section} (attempt ${attempt}/${maxRetries})...`);
+          
+          const collectionRef = collection(db, COLLECTIONS[section]);
+          
+          // Add timeout to fail faster on slow connections
+          const timeoutMs = 15000; // 15 seconds per attempt
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
+          );
+          
+          let snapshot;
+          let source = 'unknown';
+          
+          try {
+            // Try server first to get fresh data (bypass stale cache)
+            console.log(`   Trying server for ${section}...`);
+            const serverPromise = getDocsFromServer(collectionRef);
+            snapshot = await Promise.race([serverPromise, timeoutPromise]);
+            source = 'server';
+          } catch (serverError) {
+            // Fallback to cache if server fails
+            console.log(`   Server failed for ${section}, trying cache...`, serverError.message);
+            const cachePromise = getDocs(collectionRef);
+            snapshot = await Promise.race([cachePromise, timeoutPromise]);
+            source = 'cache';
+          }
+          
+          cache[section] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          
+          // Log details for debugging
+          console.log(`✅ Loaded ${cache[section].length} ${section} from ${source}`);
+          if (cache[section].length > 0) {
+            const sample = cache[section][0];
+            console.log(`   Sample ${section} ID: ${sample.id}`);
+            console.log(`   Sample date fields: createdAt=${!!sample.createdAt}, generatedAt=${!!sample.generatedAt}`);
+          }
+          
+          return { success: true, section, source };
+          
+        } catch (error) {
+          lastError = error;
+          console.warn(`⚠️ Attempt ${attempt} failed for ${section}:`, error.message);
+          
+          if (attempt < maxRetries) {
+            // Wait before retrying (exponential backoff)
+            const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+            console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+            await new Promise(r => setTimeout(r, waitTime));
+          }
+        }
+      }
+      
+      // All retries failed
+      console.error(`❌ Failed to load ${section} after ${maxRetries} attempts:`, lastError);
+      cache[section] = [];
+      return { success: false, section, error: lastError };
+    }
+
+    // Debug function - call from console: debugCache()
+    window.debugCache = () => {
+      console.log('=== ADMIN CACHE DEBUG ===');
+      ['routes', 'guides', 'conditions', 'reports'].forEach(section => {
+        console.log(`\n📁 ${section.toUpperCase()} (${cache[section].length} items):`);
+        cache[section].forEach((item, idx) => {
+          const date = getItemDate(item);
+          const name = item.routeName || item.title || item.trailName || item.locationName || 'Unknown';
+          console.log(`  ${idx + 1}. ID: ${item.id}, Name: ${name}`);
+          console.log(`      Date: ${date ? date.toISOString() : 'null'}`);
+          // Show raw date fields for debugging
+          const dateFields = ['createdAt', 'generatedAt', 'uploadedAt', 'timestamp', 'reportedAt'];
+          dateFields.forEach(field => {
+            if (item[field] !== undefined) {
+              const val = item[field];
+              const type = val?.toDate ? 'Timestamp' : val?.seconds !== undefined ? 'TimestampObj' : typeof val;
+              console.log(`      ${field}: ${JSON.stringify(val)} (${type})`);
+            }
+          });
+        });
+      });
+      console.log('\n=== END DEBUG ===');
+    };
+    
+    // Quick debug for just guides dates
+    window.debugGuidesDates = () => {
+      console.log('=== GUIDES DATE DEBUG ===');
+      cache.guides.forEach((guide, idx) => {
+        console.log(`\n${idx + 1}. ${guide.title || guide.trailName || 'Unnamed'}`);
+        console.log('   All fields:', Object.keys(guide).join(', '));
+        console.log('   generatedAt:', guide.generatedAt, typeof guide.generatedAt);
+        console.log('   createdAt:', guide.createdAt, typeof guide.createdAt);
+        console.log('   Parsed date:', getItemDate(guide));
+      });
+    };
+
+    // Clear IndexedDB cache and reload fresh from server
+    window.clearCacheAndReload = async () => {
+      showToast('Clearing cache...', 'info');
+      
+      try {
+        // Clear Firestore persistence cache
+        const databases = await indexedDB.databases();
+        const firestoreDBs = databases.filter(db => db.name && db.name.includes('firestore'));
+        
+        for (const dbInfo of firestoreDBs) {
+          console.log('🗑️ Deleting IndexedDB:', dbInfo.name);
+          await new Promise((resolve, reject) => {
+            const req = indexedDB.deleteDatabase(dbInfo.name);
+            req.onsuccess = resolve;
+            req.onerror = reject;
+          });
+        }
+        
+        // Also clear local app cache
+        cache.routes = [];
+        cache.guides = [];
+        cache.conditions = [];
+        cache.reports = [];
+        
+        showToast('Cache cleared. Reloading...', 'success');
+        
+        // Small delay then reload page to reinitialize Firestore
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        
+      } catch (error) {
+        console.error('Failed to clear cache:', error);
+        showToast('Failed to clear cache: ' + error.message, 'error');
+      }
+    };
+
+    async function loadCollection(section) {
+      const result = await loadCollectionWithRetry(section, 1);
+      return result;
+    }
+
+    window.refreshSection = async (section) => {
+      showToast(`Refreshing ${section}...`, 'info');
+      
+      // Show spinner on this section's count
+      document.getElementById(`${section}Count`).innerHTML = '<span class="spinner"></span>';
+      
+      const result = await loadCollectionWithRetry(section, 2);
+      updateAllCounts();
+      renderCurrentSection();
+      
+      if (!result.success) {
+        showToast(`Failed to refresh ${section}`, 'error');
+      } else if (cache[section].length === 0) {
+        showToast(`⚠️ ${section} returned empty. May be offline.`, 'error');
+      } else {
+        showToast(`${section.charAt(0).toUpperCase() + section.slice(1)} refreshed (${cache[section].length} items)`, 'success');
+      }
+    };
+
+    // ==================== FILTERING ====================
+
+    function getFilteredData(section) {
+      let data = [...cache[section]];
+      const search = document.getElementById('filterSearch').value.toLowerCase().trim();
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+      const owner = document.getElementById('filterOwner').value;
+      const sortOrder = document.getElementById('filterSortOrder').value;
+      
+      if (search) {
+        data = data.filter(item => {
+          const fields = [item.name, item.routeName, item.title, item.trailName, item.locationName, item.description, item.userDisplayName, item.userEmail].filter(Boolean).join(' ').toLowerCase();
+          return fields.includes(search);
+        });
+      }
+      
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        data = data.filter(item => {
+          const itemDate = getItemDate(item);
+          return itemDate && itemDate >= from;
+        });
+      }
+      
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59);
+        data = data.filter(item => {
+          const itemDate = getItemDate(item);
+          return itemDate && itemDate <= to;
+        });
+      }
+      
+      if (owner === 'mine' && currentUser) {
+        data = data.filter(item => item.userId === currentUser.uid);
+      }
+      
+      // Sort data
+      data.sort((a, b) => {
+        if (sortOrder === 'newest' || sortOrder === 'oldest') {
+          const dateA = getItemDate(a);
+          const dateB = getItemDate(b);
+          // Handle null dates - put them at the end
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        } else if (sortOrder === 'name' || sortOrder === 'name-desc') {
+          const nameA = (a.routeName || a.title || a.trailName || a.locationName || '').toLowerCase();
+          const nameB = (b.routeName || b.title || b.trailName || b.locationName || '').toLowerCase();
+          const compare = nameA.localeCompare(nameB);
+          return sortOrder === 'name' ? compare : -compare;
+        }
+        return 0;
+      });
+      
+      return data;
+    }
+
+    function getItemDate(item) {
+      // Check various date fields used by different collections
+      const dateFields = ['createdAt', 'generatedAt', 'uploadedAt', 'timestamp', 'reportedAt'];
+      
+      for (const field of dateFields) {
+        if (item[field]) {
+          // Firestore Timestamp object
+          if (item[field].toDate && typeof item[field].toDate === 'function') {
+            return item[field].toDate();
+          }
+          // Firestore Timestamp-like object with seconds
+          if (item[field].seconds !== undefined) {
+            return new Date(item[field].seconds * 1000);
+          }
+          // Already a Date
+          if (item[field] instanceof Date) {
+            return item[field];
+          }
+          // Number (Unix timestamp in ms or seconds)
+          if (typeof item[field] === 'number') {
+            // If less than year 2000 in ms, assume it's seconds
+            if (item[field] < 946684800000) {
+              return new Date(item[field] * 1000);
+            }
+            return new Date(item[field]);
+          }
+          // ISO string or other string format
+          if (typeof item[field] === 'string') {
+            const parsed = new Date(item[field]);
+            if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1971) {
+              return parsed;
+            }
+          }
+        }
+      }
+      
+      // Fallback - return null so we can display "-" instead of 1970
+      return null;
+    }
+
+    window.applyFilters = () => renderCurrentSection();
+    window.clearFilters = () => {
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      document.getElementById('filterOwner').value = 'all';
+      document.getElementById('filterSortOrder').value = 'newest';
+      renderCurrentSection();
+    };
+
+    // ==================== SECTION SWITCHING ====================
+
+    window.switchSection = (section) => {
+      currentSection = section;
+      document.querySelectorAll('.stat-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.section === section);
+      });
+      document.querySelectorAll('.section').forEach(sec => {
+        sec.classList.toggle('active', sec.id === `${section}Section`);
+      });
+      // Only render for data sections, not settings/feedback
+      if (['routes', 'guides', 'conditions', 'reports'].includes(section)) {
+        renderCurrentSection();
+      }
+    };
+
+    // ==================== RENDERING ====================
+
+    function updateAllCounts() {
+      const sections = ['routes', 'guides', 'conditions', 'reports'];
+      const totalItems = sections.reduce((sum, s) => sum + cache[s].length, 0);
+      
+      sections.forEach(section => {
+        const countEl = document.getElementById(`${section}Count`);
+        const count = cache[section].length;
+        countEl.textContent = count;
+        
+        // Add warning style if all sections are empty (likely offline)
+        if (totalItems === 0) {
+          countEl.style.color = '#f59e0b';
+          countEl.title = 'May be offline - no data loaded';
+        } else {
+          countEl.style.color = '';
+          countEl.title = '';
+        }
+      });
+    }
+
+    function renderCurrentSection() {
+      const data = getFilteredData(currentSection);
+      document.getElementById(`${currentSection}FilteredCount`).textContent = data.length;
+      const container = document.getElementById(`${currentSection}TableContainer`);
+      
+      // Debug: Log what we're rendering
+      console.log(`🎨 Rendering ${currentSection}: ${data.length} filtered / ${cache[currentSection].length} total`);
+      
+      if (data.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">${getIcon(currentSection)}</div><p>No ${currentSection} found</p></div>`;
+        return;
+      }
+      
+      const rows = data.map(item => renderTableRow(item)).join('');
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr>${getTableHeaders()}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="pagination"><div class="pagination-info">Showing ${data.length} of ${cache[currentSection].length}</div></div>
+      `;
+    }
+
+    function getIcon(section) {
+      return { routes: '🗺️', guides: '📚', conditions: '🚧', reports: '♿' }[section] || '📄';
+    }
+
+    function getTableHeaders() {
+      switch (currentSection) {
+        case 'routes': return '<th>Name</th><th>Distance</th><th>Photos</th><th>Created By</th><th>Date</th><th>Actions</th>';
+        case 'guides': return '<th>Title</th><th>Trail</th><th>Public</th><th>Created By</th><th>Date</th><th>Actions</th>';
+        case 'conditions': return '<th>Location</th><th>Conditions</th><th>Reported By</th><th>Date</th><th>Actions</th>';
+        case 'reports': return '<th>Location</th><th>Type</th><th>Rating</th><th>Created By</th><th>Date</th><th>Actions</th>';
+      }
+    }
+
+    function renderTableRow(item) {
+      const id = item.id;
+      const owner = formatOwner(item);
+      const date = formatDate(getItemDate(item));
+      const actions = `
+        <button class="action-btn view" onclick="openEditModal('${currentSection}', '${id}')">👁️</button>
+        <button class="action-btn edit" onclick="openEditModal('${currentSection}', '${id}')">✏️</button>
+        <button class="action-btn delete" onclick="promptDelete('${currentSection}', '${id}')">🗑️</button>
+      `;
+      
+      switch (currentSection) {
+        case 'routes':
+          const photos = item.routeData?.filter(p => p.type === 'photo').length || item.stats?.photos || 0;
+          return `<tr>
+            <td class="truncate">${esc(item.routeName || item.name || 'Untitled')}</td>
+            <td>${(item.totalDistance || 0).toFixed(2)} km</td>
+            <td>📷 ${photos}</td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+        case 'guides':
+          return `<tr>
+            <td class="truncate">${esc(item.routeName || item.title || 'Untitled')}</td>
+            <td class="truncate">${esc(item.accessibility?.location || '-')}</td>
+            <td><span class="tag ${item.isPublic ? 'tag-public' : 'tag-private'}">${item.isPublic ? 'Public' : 'Private'}</span></td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+        case 'conditions':
+          const conds = Array.isArray(item.conditions) ? item.conditions.map(c => c.label || c.emoji || c).join(', ') : '-';
+          return `<tr>
+            <td class="truncate">${esc(item.trailName || item.locationName || 'Unknown')}</td>
+            <td class="truncate">${esc(conds)}</td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+        case 'reports':
+          return `<tr>
+            <td class="truncate">${esc(item.locationName || item.trailName || 'Unknown')}</td>
+            <td>${esc(item.reportType || item.type || '-')}</td>
+            <td>${item.accessibilityRating || item.rating || '-'}</td>
+            <td>${owner}</td>
+            <td>${date}</td>
+            <td>${actions}</td>
+          </tr>`;
+      }
+    }
+
+    function formatOwner(item) {
+      const name = item.userDisplayName || item.userName || null;
+      const email = item.userEmail || null;
+      const userId = item.userId || null;
+      let html = '<div class="owner-cell">';
+      if (name) html += `<span class="owner-name">${esc(name)}</span>`;
+      if (email) html += `<span class="owner-email">${esc(email)}</span>`;
+      else if (!name && userId) html += `<span class="owner-name">Unknown</span>`;
+      if (userId) html += `<span class="owner-id">ID: ${userId.substring(0, 10)}...</span>`;
+      if (!name && !email && !userId) html += '<span class="owner-name">Anonymous</span>';
+      return html + '</div>';
+    }
+
+    function formatDate(date) {
+      if (!date) return '-';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function esc(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ==================== EDIT MODAL ====================
+
+    let linkedRouteData = null; // Store linked route for guides
+
+    window.openEditModal = async (section, id) => {
+      const item = cache[section].find(i => i.id === id);
+      if (!item) return;
+      
+      editingItem = JSON.parse(JSON.stringify(item)); // Deep clone
+      editingCollection = COLLECTIONS[section];
+      currentSection = section;
+      linkedRouteData = null; // Reset
+      
+      document.getElementById('editModalTitle').textContent = `${getIcon(section)} Edit ${section.slice(0, -1)}`;
+      
+      // Show modal immediately with loading state
+      document.getElementById('editModal').classList.add('active');
+      switchModalTab('preview');
+      
+      // For guides, try to load the linked route data
+      if (section === 'guides' && editingItem.routeId) {
+        console.log('🔗 Loading linked route for guide:', editingItem.routeId);
+        try {
+          // First check cache
+          linkedRouteData = cache.routes.find(r => r.id === editingItem.routeId);
+          
+          if (!linkedRouteData) {
+            // Load from Firestore
+            const routeDoc = await getDoc(doc(db, 'routes', editingItem.routeId));
+            if (routeDoc.exists()) {
+              linkedRouteData = { id: routeDoc.id, ...routeDoc.data() };
+              console.log('✅ Loaded linked route from Firestore');
+            }
+          } else {
+            console.log('✅ Found linked route in cache');
+          }
+          
+          if (linkedRouteData) {
+            console.log('📷 Linked route has', linkedRouteData.routeData?.filter(p => p.type === 'photo').length || 0, 'photos');
+            console.log('📍 Linked route has', linkedRouteData.routeData?.filter(p => p.type === 'location').length || 0, 'location points');
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not load linked route:', error.message);
+        }
+      }
+      
+      // Render all tabs
+      renderPreviewTab();
+      renderDetailsTab();
+      renderAccessibilityTab();
+      renderPhotosTab();
+      renderJsonTab();
+    };
+
+    window.closeEditModal = () => {
+      document.getElementById('editModal').classList.remove('active');
+      editingItem = null;
+      editingCollection = null;
+    };
+
+    window.switchModalTab = (tabId) => {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+    };
+
+    // ==================== PREVIEW TAB ====================
+
+    function renderPreviewTab() {
+      const item = editingItem;
+      const container = document.getElementById('tab-preview');
+      
+      // Owner info box
+      let ownerHtml = `
+        <div class="owner-info-box">
+          <h4>📋 Item Information</h4>
+          <div class="owner-info-grid">
+            <div class="owner-info-item"><div class="label">Created By</div><div class="value">${esc(item.userDisplayName || item.userName || 'Unknown')}</div></div>
+            <div class="owner-info-item"><div class="label">Email</div><div class="value">${esc(item.userEmail || '-')}</div></div>
+            <div class="owner-info-item"><div class="label">User ID</div><div class="value">${esc(item.userId || '-')}</div></div>
+            <div class="owner-info-item"><div class="label">Created</div><div class="value">${formatDate(getItemDate(item))}</div></div>
+            <div class="owner-info-item"><div class="label">Document ID</div><div class="value">${esc(item.id)}</div></div>
+          </div>
+        </div>
+      `;
+      
+      let previewHtml = '';
+      
+      if (currentSection === 'routes') {
+        const access = item.accessibilityData || {};
+        const accessLevel = getAccessLevel(access);
+        const photos = item.routeData?.filter(p => p.type === 'photo') || [];
+        const notes = item.routeData?.filter(p => p.type === 'text') || [];
+        
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">🗺️</div>
+              <div>
+                <div class="preview-title">${esc(item.routeName || item.name || 'Untitled Route')}</div>
+                <div class="preview-subtitle">${esc(access.location || 'Location not specified')}</div>
+              </div>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><div class="value">${(item.totalDistance || 0).toFixed(2)}</div><div class="label">km Distance</div></div>
+              <div class="preview-stat"><div class="value">${formatDuration(item.elapsedTime)}</div><div class="label">Duration</div></div>
+              <div class="preview-stat"><div class="value">${photos.length}</div><div class="label">Photos</div></div>
+              <div class="preview-stat"><div class="value">${notes.length}</div><div class="label">Notes</div></div>
+            </div>
+          </div>
+          <div class="access-banner ${accessLevel.class}">
+            <div class="icon">${accessLevel.icon}</div>
+            <div><div class="level">${accessLevel.label}</div><div class="desc">${accessLevel.desc}</div></div>
+          </div>
+          <div class="map-container" id="previewMap"></div>
+        `;
+      } else if (currentSection === 'guides') {
+        const meta = item.metadata || {};
+        const access = item.accessibility || {};
+        const accessLevel = getAccessLevel(access);
+        
+        // Check if we have linked route info
+        const hasLinkedRoute = linkedRouteData && linkedRouteData.routeData;
+        const linkedPhotos = hasLinkedRoute ? linkedRouteData.routeData.filter(p => p.type === 'photo').length : 0;
+        const linkedNotes = hasLinkedRoute ? linkedRouteData.routeData.filter(p => p.type === 'text').length : 0;
+        
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">📚</div>
+              <div>
+                <div class="preview-title">${esc(item.routeName || item.title || 'Untitled Guide')}</div>
+                <div class="preview-subtitle">${esc(access.location || 'Location not specified')}</div>
+              </div>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><div class="value">${(meta.totalDistance || 0).toFixed(2)}</div><div class="label">km</div></div>
+              <div class="preview-stat"><div class="value">${hasLinkedRoute ? linkedPhotos : (meta.photoCount || 0)}</div><div class="label">Photos</div></div>
+              <div class="preview-stat"><div class="value">${hasLinkedRoute ? linkedNotes : (meta.noteCount || 0)}</div><div class="label">Notes</div></div>
+              <div class="preview-stat"><div class="value">${item.isPublic ? '✅' : '🔒'}</div><div class="label">${item.isPublic ? 'Public' : 'Private'}</div></div>
+            </div>
+          </div>
+          ${item.routeId ? `
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:16px;">
+              <strong>🔗 Linked Route:</strong> ${linkedRouteData ? esc(linkedRouteData.routeName || linkedRouteData.name || 'Unknown') : '<span style="color:#f59e0b;">Loading...</span>'}
+              <br><small style="color:#6b7280;">ID: ${item.routeId}</small>
+            </div>
+          ` : ''}
+          <div class="access-banner ${accessLevel.class}">
+            <div class="icon">${accessLevel.icon}</div>
+            <div><div class="level">${accessLevel.label}</div><div class="desc">${accessLevel.desc}</div></div>
+          </div>
+          <div class="map-container" id="previewMap"></div>
+        `;
+      } else if (currentSection === 'conditions') {
+        const conds = Array.isArray(item.conditions) ? item.conditions : [];
+        
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">🚧</div>
+              <div>
+                <div class="preview-title">${esc(item.trailName || 'Trail Condition Report')}</div>
+                <div class="preview-subtitle">${esc(item.locationName || 'Unknown location')}</div>
+              </div>
+            </div>
+          </div>
+          <h4>Reported Conditions:</h4>
+          <div class="chip-grid" style="margin-top:10px;">
+            ${conds.map(c => `<span class="chip selected">${c.emoji || ''} ${c.label || c}</span>`).join('')}
+          </div>
+          ${item.notes ? `<div style="margin-top:20px;"><h4>Notes:</h4><p style="margin-top:8px;">${esc(item.notes)}</p></div>` : ''}
+        `;
+      } else if (currentSection === 'reports') {
+        previewHtml = `
+          ${ownerHtml}
+          <div class="preview-card">
+            <div class="preview-header">
+              <div class="preview-icon">♿</div>
+              <div>
+                <div class="preview-title">${esc(item.locationName || item.trailName || 'Accessibility Report')}</div>
+                <div class="preview-subtitle">Type: ${esc(item.reportType || item.type || 'General')}</div>
+              </div>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><div class="value">${item.accessibilityRating || item.rating || '-'}</div><div class="label">Rating</div></div>
+              <div class="preview-stat"><div class="value">${item.isPublic ? '✅' : '🔒'}</div><div class="label">${item.isPublic ? 'Public' : 'Private'}</div></div>
+              <div class="preview-stat"><div class="value">${item.upvotes || 0}</div><div class="label">Upvotes</div></div>
+            </div>
+          </div>
+          ${item.description || item.notes ? `<div style="margin-top:20px;"><h4>Description:</h4><p style="margin-top:8px;">${esc(item.description || item.notes)}</p></div>` : ''}
+        `;
+      }
+      
+      container.innerHTML = previewHtml;
+      
+      // Initialize map if route or guide with linked route
+      if (currentSection === 'routes' || currentSection === 'guides') {
+        setTimeout(() => initPreviewMap(), 100);
+      }
+    }
+
+    function getAccessLevel(data) {
+      const summary = data?.accessibilitySummary || data?.wheelchairAccess || '';
+      if (summary.toLowerCase().includes('not')) return { class: 'not-accessible', icon: '❌', label: 'Not Accessible', desc: 'This trail has significant accessibility barriers' };
+      if (summary.toLowerCase().includes('partial')) return { class: 'partial', icon: '⚠️', label: 'Partially Accessible', desc: 'Some sections may have accessibility challenges' };
+      if (summary.toLowerCase().includes('fully') || summary.toLowerCase().includes('accessible')) return { class: 'accessible', icon: '✅', label: 'Fully Accessible', desc: 'Trail is accessible for most mobility aids' };
+      return { class: 'partial', icon: '❔', label: 'Accessibility Unknown', desc: 'No accessibility information available' };
+    }
+
+    function formatDuration(value) {
+      if (!value || value === 0) return '-';
+      
+      let ms = value;
+      
+      // If value is unreasonably large (> 30 days in ms), it might be in wrong format
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      
+      // Check if it looks like seconds instead of milliseconds (value < 86400 = 24h in seconds)
+      if (value > 0 && value < 86400) {
+        // Likely stored in seconds, convert to ms
+        ms = value * 1000;
+      }
+      
+      // If still unreasonably large (> 30 days), show as invalid
+      if (ms > thirtyDaysMs) {
+        console.warn('⚠️ Unreasonable duration value:', value);
+        return '⚠️ Invalid';
+      }
+      
+      const totalSeconds = Math.floor(ms / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      
+      if (hours === 0 && mins === 0) return '< 1m';
+      if (hours === 0) return `${mins}m`;
+      return `${hours}h ${mins}m`;
+    }
+
+    function initPreviewMap() {
+      const mapEl = document.getElementById('previewMap');
+      if (!mapEl) return;
+      
+      // Get route data - for guides, use linked route
+      let routeData = null;
+      if (currentSection === 'routes') {
+        routeData = editingItem?.routeData;
+      } else if (currentSection === 'guides' && linkedRouteData) {
+        routeData = linkedRouteData.routeData;
+        console.log('🗺️ Using linked route data for map');
+      }
+      
+      if (!routeData) {
+        if (currentSection === 'guides' && editingItem.routeId) {
+          mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#f59e0b;">⚠️ Could not load linked route for map</div>';
+        } else {
+          mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;">No route data available</div>';
+        }
+        return;
+      }
+      
+      const locations = routeData.filter(p => p.type === 'location' && p.coords);
+      if (locations.length === 0) {
+        mapEl.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;">No location data available</div>';
+        return;
+      }
+      
+      console.log('🗺️ Rendering map with', locations.length, 'location points');
+      
+      const map = L.map(mapEl).setView([locations[0].coords.lat, locations[0].coords.lng], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      
+      const coords = locations.map(p => [p.coords.lat, p.coords.lng]);
+      L.polyline(coords, { color: '#2c5530', weight: 4 }).addTo(map);
+      
+      L.marker(coords[0], { title: 'Start' }).addTo(map);
+      if (coords.length > 1) L.marker(coords[coords.length-1], { title: 'End' }).addTo(map);
+      
+      map.fitBounds(coords);
+    }
+
+    // ==================== DETAILS TAB ====================
+
+    function renderDetailsTab() {
+      const item = editingItem;
+      const container = document.getElementById('tab-details');
+      
+      let html = '';
+      
+      if (currentSection === 'routes') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Route Name</label>
+              <input type="text" id="edit_routeName" value="${esc(item.routeName || item.name || '')}">
+            </div>
+            <div class="form-field">
+              <label>Total Distance (km)</label>
+              <input type="number" id="edit_totalDistance" value="${item.totalDistance || 0}" step="0.01">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Description</label>
+            <textarea id="edit_description">${esc(item.description || '')}</textarea>
+          </div>
+        `;
+      } else if (currentSection === 'guides') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Title</label>
+              <input type="text" id="edit_routeName" value="${esc(item.routeName || item.title || '')}">
+            </div>
+            <div class="form-field">
+              <label>Public</label>
+              <select id="edit_isPublic">
+                <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
+                <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
+              </select>
+            </div>
+          </div>
+        `;
+      } else if (currentSection === 'conditions') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Trail Name</label>
+              <input type="text" id="edit_trailName" value="${esc(item.trailName || '')}">
+            </div>
+            <div class="form-field">
+              <label>Location Name</label>
+              <input type="text" id="edit_locationName" value="${esc(item.locationName || '')}">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Notes</label>
+            <textarea id="edit_notes">${esc(item.notes || '')}</textarea>
+          </div>
+        `;
+      } else if (currentSection === 'reports') {
+        html = `
+          <div class="form-row">
+            <div class="form-field">
+              <label>Location Name</label>
+              <input type="text" id="edit_locationName" value="${esc(item.locationName || '')}">
+            </div>
+            <div class="form-field">
+              <label>Trail Name</label>
+              <input type="text" id="edit_trailName" value="${esc(item.trailName || '')}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>Report Type</label>
+              <input type="text" id="edit_reportType" value="${esc(item.reportType || item.type || '')}">
+            </div>
+            <div class="form-field">
+              <label>Accessibility Rating (0-5)</label>
+              <input type="number" id="edit_accessibilityRating" value="${item.accessibilityRating || item.rating || 0}" min="0" max="5" step="0.1">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Public</label>
+            <select id="edit_isPublic">
+              <option value="true" ${item.isPublic ? 'selected' : ''}>Public</option>
+              <option value="false" ${!item.isPublic ? 'selected' : ''}>Private</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Description</label>
+            <textarea id="edit_description">${esc(item.description || item.notes || '')}</textarea>
+          </div>
+        `;
+      }
+      
+      container.innerHTML = html;
+    }
+
+    // ==================== ACCESSIBILITY TAB ====================
+
+    function renderAccessibilityTab() {
+      const container = document.getElementById('tab-accessibility');
+      const item = editingItem;
+      
+      // Get accessibility data from appropriate location
+      let accessData = {};
+      if (currentSection === 'routes') {
+        accessData = item.accessibilityData || {};
+      } else if (currentSection === 'guides') {
+        accessData = item.accessibility || {};
+      } else {
+        container.innerHTML = '<div class="empty-state"><p>Accessibility survey not applicable for this item type</p></div>';
+        return;
+      }
+      
+      let html = '<p style="margin-bottom:20px;color:#6b7280;">Complete the accessibility survey for this trail. All fields are optional.</p>';
+      
+      // Render each section
+      Object.entries(ACCESSIBILITY_FIELDS).forEach(([sectionKey, section]) => {
+        html += `
+          <div class="section-header" onclick="toggleAccessSection('${sectionKey}')">
+            <span class="icon">${section.title.split(' ')[0]}</span>
+            <span class="title">${section.title.substring(2)}</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content" id="access-section-${sectionKey}">
+        `;
+        
+        section.fields.forEach(field => {
+          const value = accessData[field.name] || '';
+          html += renderAccessibilityField(field, value);
+        });
+        
+        html += '</div>';
+      });
+      
+      container.innerHTML = html;
+      
+      // Setup event listeners for cards, chips, checkboxes
+      setupAccessibilityListeners();
+    }
+
+    function renderAccessibilityField(field, value) {
+      let html = `<div class="form-field"><label>${field.label}</label>`;
+      
+      switch (field.type) {
+        case 'text':
+          html += `<input type="text" id="access_${field.name}" value="${esc(value)}">`;
+          break;
+        case 'number':
+          html += `<input type="number" id="access_${field.name}" value="${value || 0}" step="${field.step || '1'}">`;
+          break;
+        case 'date':
+          html += `<input type="date" id="access_${field.name}" value="${value}">`;
+          break;
+        case 'textarea':
+          html += `<textarea id="access_${field.name}">${esc(value)}</textarea>`;
+          break;
+        case 'select':
+          html += `<select id="access_${field.name}">${field.options.map(o => `<option value="${o}" ${value === o ? 'selected' : ''}>${o || 'Select...'}</option>`).join('')}</select>`;
+          break;
+        case 'checkbox':
+          html += `<div class="styled-checkbox ${value ? 'checked' : ''}" data-field="${field.name}"><span class="check-box">✓</span><span>${field.label}</span></div>`;
+          break;
+        case 'chips':
+          const selectedChips = Array.isArray(value) ? value : (value ? [value] : []);
+          html += `<div class="chip-grid" data-field="${field.name}" data-multi="${field.multi || false}">${field.options.map(o => `<div class="chip ${selectedChips.includes(o) ? 'selected' : ''}" data-value="${o}">${o}</div>`).join('')}</div>`;
+          break;
+        case 'cards':
+          html += `<div class="card-grid" data-field="${field.name}">${field.options.map(o => `<div class="select-card ${value === o.value ? 'selected' : ''}" data-value="${o.value}"><span class="card-icon">${o.icon}</span><span class="card-label">${o.label}</span></div>`).join('')}</div>`;
+          break;
+      }
+      
+      html += '</div>';
+      return html;
+    }
+
+    window.toggleAccessSection = (sectionKey) => {
+      const header = event.target.closest('.section-header');
+      const content = document.getElementById(`access-section-${sectionKey}`);
+      header.classList.toggle('collapsed');
+      content.classList.toggle('collapsed');
+    };
+
+    function setupAccessibilityListeners() {
+      // Card clicks
+      document.querySelectorAll('#tab-accessibility .select-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const grid = card.closest('.card-grid');
+          grid.querySelectorAll('.select-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+        });
+      });
+      
+      // Chip clicks
+      document.querySelectorAll('#tab-accessibility .chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const grid = chip.closest('.chip-grid');
+          const multi = grid.dataset.multi === 'true';
+          if (!multi) grid.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.toggle('selected');
+        });
+      });
+      
+      // Checkbox clicks
+      document.querySelectorAll('#tab-accessibility .styled-checkbox').forEach(cb => {
+        cb.addEventListener('click', () => cb.classList.toggle('checked'));
+      });
+    }
+
+    // ==================== PHOTOS TAB ====================
+
+    function renderPhotosTab() {
+      const container = document.getElementById('tab-photos');
+      
+      // Get photos based on item type
+      let photos = [];
+      let notes = [];
+      let canAddPhotos = false;
+      let canAddNotes = false;
+      let fromLinkedRoute = false;
+      
+      if (currentSection === 'routes') {
+        if (editingItem.routeData) {
+          photos = editingItem.routeData.filter(p => p.type === 'photo');
+          notes = editingItem.routeData.filter(p => p.type === 'text');
+        }
+        canAddPhotos = true;
+        canAddNotes = true;
+      } else if (currentSection === 'guides') {
+        // Guides: first try linked route, then guide's own photos
+        if (linkedRouteData && linkedRouteData.routeData) {
+          photos = linkedRouteData.routeData.filter(p => p.type === 'photo');
+          notes = linkedRouteData.routeData.filter(p => p.type === 'text');
+          fromLinkedRoute = true;
+          console.log('📷 Using photos from linked route');
+        } else if (editingItem.photos) {
+          photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+        }
+        canAddPhotos = false; // Don't allow adding to linked route
+        canAddNotes = false;
+      } else if (currentSection === 'conditions') {
+        // Conditions might have photos array
+        if (editingItem.photos) {
+          photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+        }
+        if (editingItem.imageUrl) {
+          photos.push({ content: editingItem.imageUrl, url: editingItem.imageUrl });
+        }
+        canAddPhotos = true;
+      } else if (currentSection === 'reports') {
+        // Reports might have photos array or individual photo fields
+        if (editingItem.photos) {
+          photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+        }
+        if (editingItem.imageUrl) {
+          photos.push({ content: editingItem.imageUrl, url: editingItem.imageUrl });
+        }
+        if (editingItem.photoUrl) {
+          photos.push({ content: editingItem.photoUrl, url: editingItem.photoUrl });
+        }
+        canAddPhotos = true;
+      }
+      
+      // Debug: Log photo data structure
+      console.log(`📷 Photos tab - Section: ${currentSection}, Photos found: ${photos.length}, From linked route: ${fromLinkedRoute}`);
+      if (photos.length > 0) {
+        console.log('📷 First photo structure:', photos[0]);
+        console.log('📷 Photo keys:', typeof photos[0] === 'object' ? Object.keys(photos[0]) : 'string');
+      }
+      
+      let html = '<h4 style="margin-bottom:8px;">📷 Photos (' + photos.length + ' found)</h4>';
+      
+      if (fromLinkedRoute) {
+        html += `<p style="color:#6b7280;font-size:0.85em;margin-bottom:16px;">
+          📎 Photos from linked route: <strong>${linkedRouteData.routeName || linkedRouteData.name || 'Unknown'}</strong>
+        </p>`;
+      }
+      
+      if (photos.length === 0) {
+        if (currentSection === 'guides' && editingItem.routeId && !linkedRouteData) {
+          html += '<p style="color:#f59e0b;">⚠️ Could not load linked route data. The original route may have been deleted.</p>';
+        } else {
+          html += '<p style="color:#6b7280;">No photos found for this item.</p>';
+        }
+        if (canAddPhotos) {
+          html += '<div class="photos-grid">';
+          html += `
+            <div class="add-photo-card" onclick="triggerPhotoUpload()">
+              <div class="icon">➕</div>
+              <div class="text">Add Photo</div>
+            </div>
+          `;
+          html += '</div>';
+        }
+      } else {
+        html += '<div class="photos-grid">';
+        
+        photos.forEach((photo, idx) => {
+          // Handle different photo data structures
+          let src = '';
+          if (typeof photo === 'string') {
+            src = photo;
+          } else {
+            src = photo.content || photo.dataUrl || photo.url || photo.imageUrl || photo.src || '';
+          }
+          
+          // Debug: Log each photo
+          console.log(`📷 Photo ${idx}:`, { 
+            type: typeof photo, 
+            hasContent: !!photo?.content,
+            hasDataUrl: !!photo?.dataUrl,
+            hasUrl: !!photo?.url,
+            srcLength: src?.length || 0,
+            srcPreview: src?.substring(0, 50) || 'empty'
+          });
+          
+          if (src && src.length > 10) {
+            html += `
+              <div class="photo-card">
+                <img src="${src}" alt="Photo ${idx+1}" 
+                  onload="console.log('✅ Photo ${idx+1} loaded')"
+                  onerror="console.log('❌ Photo ${idx+1} failed to load'); this.style.display='none'; this.parentElement.querySelector('.photo-error').style.display='flex';">
+                <div class="photo-error" style="display:none;position:absolute;inset:0;background:#f3f4f6;align-items:center;justify-content:center;flex-direction:column;color:#9ca3af;">
+                  <span style="font-size:2em;">📷</span>
+                  <span style="font-size:0.7em;">Load failed</span>
+                </div>
+                <div class="photo-actions">
+                  <button class="photo-btn" onclick="viewFullPhoto(${idx})" title="View">🔍</button>
+                  <button class="photo-btn" onclick="removePhoto(${idx})" title="Remove">🗑️</button>
+                </div>
+              </div>
+            `;
+          } else {
+            // Show placeholder for photos with missing/invalid data
+            html += `
+              <div class="photo-card">
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;background:#fef3c7;color:#92400e;flex-direction:column;padding:8px;text-align:center;">
+                  <span style="font-size:2em;">⚠️</span>
+                  <span style="font-size:0.65em;">No image data</span>
+                  <span style="font-size:0.55em;color:#666;">${typeof photo === 'object' ? Object.keys(photo).join(', ') : 'string'}</span>
+                </div>
+                <div class="photo-actions">
+                  <button class="photo-btn" onclick="removePhoto(${idx})" title="Remove">🗑️</button>
+                </div>
+              </div>
+            `;
+          }
+        });
+        
+        if (canAddPhotos) {
+          html += `
+            <div class="add-photo-card" onclick="triggerPhotoUpload()">
+              <div class="icon">➕</div>
+              <div class="text">Add Photo</div>
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+      }
+      
+      // Notes section (primarily for routes)
+      if (currentSection === 'routes' || notes.length > 0) {
+        html += '<h4 style="margin:24px 0 16px;">📝 Notes</h4>';
+        
+        if (notes.length === 0) {
+          html += '<p style="color:#6b7280;margin-bottom:12px;">No notes yet.</p>';
+        }
+        
+        notes.forEach((note, idx) => {
+          const noteText = note.content || note.text || '';
+          html += `
+            <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-bottom:8px;display:flex;gap:12px;">
+              <textarea style="flex:1;min-height:60px;border:1px solid #e5e7eb;border-radius:6px;padding:8px;" onchange="updateNote(${idx}, this.value)">${esc(noteText)}</textarea>
+              <button class="btn btn-danger btn-sm" onclick="removeNote(${idx})">🗑️</button>
+            </div>
+          `;
+        });
+        
+        if (canAddNotes) {
+          html += `<button class="btn btn-secondary" onclick="addNote()" style="margin-top:8px;">➕ Add Note</button>`;
+        }
+      }
+      
+      // Description/Notes for non-route items
+      if (currentSection !== 'routes') {
+        const desc = editingItem.description || editingItem.notes || '';
+        html += `
+          <h4 style="margin:24px 0 16px;">📝 Description / Notes</h4>
+          <textarea id="photos_tab_notes" style="width:100%;min-height:100px;border:1px solid #e5e7eb;border-radius:6px;padding:12px;" placeholder="Add notes or description...">${esc(desc)}</textarea>
+        `;
+      }
+      
+      container.innerHTML = html;
+    }
+
+    window.viewFullPhoto = (idx) => {
+      // Get photos array based on section
+      let photos = [];
+      if (currentSection === 'routes' && editingItem.routeData) {
+        photos = editingItem.routeData.filter(p => p.type === 'photo');
+      } else if (currentSection === 'guides' && linkedRouteData && linkedRouteData.routeData) {
+        photos = linkedRouteData.routeData.filter(p => p.type === 'photo');
+      } else if (editingItem.photos) {
+        photos = Array.isArray(editingItem.photos) ? editingItem.photos : [editingItem.photos];
+      }
+      
+      const photo = photos[idx];
+      if (!photo) {
+        console.warn('❌ Photo not found at index', idx);
+        return;
+      }
+      
+      // Get the image source
+      let imgSrc = '';
+      if (typeof photo === 'string') {
+        imgSrc = photo;
+      } else {
+        imgSrc = photo.content || photo.dataUrl || photo.url || photo.imageUrl || photo.src || '';
+      }
+      
+      console.log('🔍 Opening photo:', { idx, srcLength: imgSrc?.length, srcStart: imgSrc?.substring(0, 50) });
+      
+      if (imgSrc && imgSrc.length > 10) {
+        // Create fullscreen overlay instead of new tab (works better for base64)
+        const overlay = document.createElement('div');
+        overlay.id = 'photoOverlay';
+        overlay.style.cssText = `
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          cursor: zoom-out;
+          padding: 20px;
+        `;
+        overlay.onclick = () => overlay.remove();
+        
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.style.cssText = `
+          max-width: 95%;
+          max-height: 95%;
+          object-fit: contain;
+          border-radius: 8px;
+          box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        `;
+        img.onclick = (e) => e.stopPropagation();
+        
+        // Download button
+        const downloadBtn = document.createElement('button');
+        downloadBtn.innerHTML = '⬇️ Download';
+        downloadBtn.style.cssText = `
+          position: absolute;
+          top: 20px;
+          right: 70px;
+          background: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+        `;
+        downloadBtn.onclick = (e) => {
+          e.stopPropagation();
+          const a = document.createElement('a');
+          a.href = imgSrc;
+          a.download = `photo_${idx + 1}.jpg`;
+          a.click();
+        };
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '✕';
+        closeBtn.style.cssText = `
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: white;
+          border: none;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 20px;
+        `;
+        closeBtn.onclick = () => overlay.remove();
+        
+        overlay.appendChild(img);
+        overlay.appendChild(downloadBtn);
+        overlay.appendChild(closeBtn);
+        document.body.appendChild(overlay);
+        
+        // Close on escape key
+        const handleEsc = (e) => {
+          if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', handleEsc);
+          }
+        };
+        document.addEventListener('keydown', handleEsc);
+      } else {
+        console.warn('❌ No valid image source found');
+        showToast('Could not load photo', 'error');
+      }
+    };
+
+    window.triggerPhotoUpload = () => {
+      document.getElementById('photoUploadInput').click();
+    };
+
+    document.getElementById('photoUploadInput').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files.length) return;
+      
+      for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const photoData = {
+            content: evt.target.result,
+            timestamp: Date.now(),
+            fileName: file.name
+          };
+          
+          if (currentSection === 'routes') {
+            // Routes use routeData array
+            if (!editingItem.routeData) editingItem.routeData = [];
+            editingItem.routeData.push({
+              type: 'photo',
+              ...photoData
+            });
+          } else {
+            // Other sections use photos array
+            if (!editingItem.photos) editingItem.photos = [];
+            editingItem.photos.push(photoData);
+          }
+          
+          renderPhotosTab();
+        };
+        reader.readAsDataURL(file);
+      }
+      e.target.value = '';
+    });
+
+    window.removePhoto = (idx) => {
+      if (currentSection === 'routes') {
+        if (!editingItem.routeData) return;
+        const photos = editingItem.routeData.filter(p => p.type === 'photo');
+        const photoToRemove = photos[idx];
+        editingItem.routeData = editingItem.routeData.filter(p => p !== photoToRemove);
+      } else {
+        if (!editingItem.photos) return;
+        editingItem.photos.splice(idx, 1);
+      }
+      renderPhotosTab();
+    };
+
+    window.addNote = () => {
+      if (!editingItem.routeData) editingItem.routeData = [];
+      editingItem.routeData.push({
+        type: 'text',
+        content: '',
+        timestamp: Date.now()
+      });
+      renderPhotosTab();
+    };
+
+    window.updateNote = (idx, value) => {
+      if (!editingItem.routeData) return;
+      const notes = editingItem.routeData.filter(p => p.type === 'text');
+      if (notes[idx]) notes[idx].content = value;
+    };
+
+    window.removeNote = (idx) => {
+      if (!editingItem.routeData) return;
+      const notes = editingItem.routeData.filter(p => p.type === 'text');
+      const noteToRemove = notes[idx];
+      editingItem.routeData = editingItem.routeData.filter(p => p !== noteToRemove);
+      renderPhotosTab();
+    };
+
+    // ==================== JSON TAB ====================
+
+    function renderJsonTab() {
+      const container = document.getElementById('tab-json');
+      container.innerHTML = `
+        <div style="margin-bottom:12px;display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="copyJson()">📋 Copy JSON</button>
+          <button class="btn btn-secondary btn-sm" onclick="downloadJson()">📥 Download</button>
+        </div>
+        <div class="json-preview">${JSON.stringify(editingItem, null, 2)}</div>
+      `;
+    }
+
+    window.copyJson = () => {
+      navigator.clipboard.writeText(JSON.stringify(editingItem, null, 2));
+      showToast('Copied to clipboard', 'success');
+    };
+
+    window.downloadJson = () => {
+      const blob = new Blob([JSON.stringify(editingItem, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentSection}-${editingItem.id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // ==================== SAVE ====================
+
+    window.saveCurrentItem = async () => {
+      if (!editingItem || !editingCollection) return;
+      
+      try {
+        // Collect updates from Details tab
+        const updates = { updatedAt: Timestamp.now(), updatedBy: currentUser.uid };
+        
+        // Basic fields
+        ['routeName', 'name', 'title', 'trailName', 'locationName', 'reportType', 'description', 'notes'].forEach(field => {
+          const el = document.getElementById(`edit_${field}`);
+          if (el) updates[field] = el.value;
+        });
+        
+        // Number fields
+        ['totalDistance', 'accessibilityRating'].forEach(field => {
+          const el = document.getElementById(`edit_${field}`);
+          if (el) updates[field] = parseFloat(el.value) || 0;
+        });
+        
+        // Boolean fields
+        const isPublicEl = document.getElementById('edit_isPublic');
+        if (isPublicEl) updates.isPublic = isPublicEl.value === 'true';
+        
+        // Collect accessibility data
+        if (currentSection === 'routes' || currentSection === 'guides') {
+          const accessData = collectAccessibilityData();
+          if (currentSection === 'routes') {
+            updates.accessibilityData = accessData;
+          } else {
+            updates.accessibility = accessData;
+          }
+        }
+        
+        // Route data (photos, notes) - for routes
+        if (currentSection === 'routes' && editingItem.routeData) {
+          updates.routeData = editingItem.routeData;
+          updates.stats = {
+            locationPoints: editingItem.routeData.filter(p => p.type === 'location').length,
+            photos: editingItem.routeData.filter(p => p.type === 'photo').length,
+            notes: editingItem.routeData.filter(p => p.type === 'text').length,
+            totalDataPoints: editingItem.routeData.length
+          };
+        }
+        
+        // Photos array - for non-route items
+        if (currentSection !== 'routes' && editingItem.photos) {
+          updates.photos = editingItem.photos;
+        }
+        
+        // Notes from photos tab - for non-route items
+        if (currentSection !== 'routes') {
+          const notesTextarea = document.getElementById('photos_tab_notes');
+          if (notesTextarea) {
+            const notesValue = notesTextarea.value;
+            // Save to both description and notes fields for compatibility
+            updates.description = notesValue;
+            updates.notes = notesValue;
+          }
+        }
+        
+        // Save to Firestore
+        const docRef = doc(db, editingCollection, editingItem.id);
+        await updateDoc(docRef, updates);
+        
+        // Update cache
+        const cacheItem = cache[currentSection].find(i => i.id === editingItem.id);
+        if (cacheItem) Object.assign(cacheItem, updates);
+        
+        closeEditModal();
+        renderCurrentSection();
+        showToast('Saved to cloud successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Save error:', error);
+        showToast('Failed to save: ' + error.message, 'error');
+      }
+    };
+
+    function collectAccessibilityData() {
+      const data = {};
+      
+      // Text, number, date, textarea, select inputs
+      document.querySelectorAll('#tab-accessibility input, #tab-accessibility textarea, #tab-accessibility select').forEach(el => {
+        if (el.id.startsWith('access_')) {
+          const field = el.id.replace('access_', '');
+          data[field] = el.type === 'number' ? parseFloat(el.value) || 0 : el.value;
+        }
+      });
+      
+      // Cards (single select)
+      document.querySelectorAll('#tab-accessibility .card-grid').forEach(grid => {
+        const field = grid.dataset.field;
+        const selected = grid.querySelector('.select-card.selected');
+        if (selected) data[field] = selected.dataset.value;
+      });
+      
+      // Chips
+      document.querySelectorAll('#tab-accessibility .chip-grid').forEach(grid => {
+        const field = grid.dataset.field;
+        const multi = grid.dataset.multi === 'true';
+        const selected = [...grid.querySelectorAll('.chip.selected')].map(c => c.dataset.value);
+        data[field] = multi ? selected : (selected[0] || '');
+      });
+      
+      // Checkboxes
+      document.querySelectorAll('#tab-accessibility .styled-checkbox').forEach(cb => {
+        const field = cb.dataset.field;
+        data[field] = cb.classList.contains('checked');
+      });
+      
+      return data;
+    }
+
+    // ==================== DELETE ====================
+
+    window.promptDelete = (section, id) => {
+      const item = cache[section].find(i => i.id === id);
+      if (!item) return;
+      editingItem = item;
+      editingCollection = COLLECTIONS[section];
+      currentSection = section;
+      
+      document.getElementById('deleteMessage').innerHTML = `Delete "<strong>${esc(item.routeName || item.name || item.title || item.trailName || 'this item')}</strong>"?<br><br>This cannot be undone.`;
+      document.getElementById('deleteModal').classList.add('active');
+    };
+
+    window.closeDeleteModal = () => {
+      document.getElementById('deleteModal').classList.remove('active');
+    };
+
+    window.deleteCurrentItem = () => {
+      if (!editingItem) return;
+      document.getElementById('deleteMessage').innerHTML = `Delete "<strong>${esc(editingItem.routeName || editingItem.name || editingItem.title || 'this item')}</strong>"?<br><br>This cannot be undone.`;
+      document.getElementById('deleteModal').classList.add('active');
+    };
+
+    window.confirmDelete = async () => {
+      if (!editingItem || !editingCollection) return;
+      
+      try {
+        await deleteDoc(doc(db, editingCollection, editingItem.id));
+        
+        const idx = cache[currentSection].findIndex(i => i.id === editingItem.id);
+        if (idx > -1) cache[currentSection].splice(idx, 1);
+        
+        closeDeleteModal();
+        closeEditModal();
+        updateAllCounts();
+        renderCurrentSection();
+        showToast('Deleted successfully', 'success');
+      } catch (error) {
+        showToast('Failed to delete: ' + error.message, 'error');
+      }
+    };
+
+    // ==================== EXPORT ====================
+
+    window.exportSection = (section) => {
+      const data = getFilteredData(section);
+      if (!data.length) { showToast('No data to export', 'info'); return; }
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `access-nature-${section}-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${data.length} items`, 'success');
+    };
+
+    // ==================== TOAST ====================
+
+    function showToast(message, type = 'info') {
+      document.querySelectorAll('.toast').forEach(t => t.remove());
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ==================== EMAILJS SETTINGS ====================
+    
+    const SETTINGS_KEY = 'accessNature_adminSettings';
+    
+    // Load settings on page load
+    function loadEmailJSSettings() {
+      try {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        const emailjs = settings.emailjs || {};
+        
+        document.getElementById('emailjsPublicKey').value = emailjs.publicKey || '';
+        document.getElementById('emailjsServiceId').value = emailjs.serviceId || '';
+        document.getElementById('emailjsTemplateId').value = emailjs.templateId || '';
+        
+        console.log('📧 EmailJS settings loaded');
+      } catch (e) {
+        console.warn('Failed to load EmailJS settings:', e);
+      }
+    }
+    
+    // Save EmailJS settings
+    window.saveEmailJSSettings = function() {
+      try {
+        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        
+        settings.emailjs = {
+          publicKey: document.getElementById('emailjsPublicKey').value.trim(),
+          serviceId: document.getElementById('emailjsServiceId').value.trim(),
+          templateId: document.getElementById('emailjsTemplateId').value.trim()
+        };
+        
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        
+        showToast('✅ EmailJS settings saved!', 'success');
+        console.log('📧 EmailJS settings saved:', settings.emailjs);
+      } catch (e) {
+        console.error('Failed to save EmailJS settings:', e);
+        showToast('❌ Failed to save settings', 'error');
+      }
+    };
+    
+    // Test EmailJS connection
+    window.testEmailJS = async function() {
+      const publicKey = document.getElementById('emailjsPublicKey').value.trim();
+      const serviceId = document.getElementById('emailjsServiceId').value.trim();
+      const templateId = document.getElementById('emailjsTemplateId').value.trim();
+      
+      if (!publicKey || !serviceId || !templateId) {
+        showToast('⚠️ Please fill in all EmailJS fields first', 'error');
+        return;
+      }
+      
+      showToast('🔄 Testing EmailJS connection...', 'info');
+      
+      try {
+        // Load EmailJS if not already loaded
+        if (typeof emailjs === 'undefined') {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        
+        // Initialize with public key
+        emailjs.init(publicKey);
+        
+        // Try to send a test email (to yourself or a test address)
+        const testEmail = prompt('Enter your email address to receive a test message:');
+        if (!testEmail) {
+          showToast('Test cancelled', 'info');
+          return;
+        }
+        
+        await emailjs.send(serviceId, templateId, {
+          to_email: testEmail,
+          to_name: 'Test User',
+          from_name: 'Access Nature Admin',
+          subject: '🧪 EmailJS Test - Access Nature',
+          message: 'This is a test message from Access Nature. If you received this, EmailJS is configured correctly!',
+          maps_url: 'https://maps.google.com',
+          timestamp: new Date().toLocaleString()
+        });
+        
+        showToast('✅ Test email sent! Check your inbox.', 'success');
+      } catch (error) {
+        console.error('EmailJS test failed:', error);
+        showToast(`❌ Test failed: ${error.text || error.message || 'Unknown error'}`, 'error');
+      }
+    };
+    
+    // Load EmailJS settings when settings section is shown
+    const originalSwitchSection = window.switchSection;
+    window.switchSection = (section) => {
+      originalSwitchSection(section);
+      if (section === 'settings') {
+        loadEmailJSSettings();
+      }
+      if (section === 'feedback') {
+        loadFeedback();
+      }
+    };
+
+    // Load feedback count asynchronously (non-blocking)
+    async function loadFeedbackCount() {
+      try {
+        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        const feedbackSnapshot = await getDocs(collection(db, 'beta_feedback'));
+        const count = feedbackSnapshot.size;
+        document.getElementById('feedbackCount').textContent = count;
+        console.log(`📬 Loaded feedback count: ${count}`);
+      } catch (error) {
+        console.warn('Failed to load feedback count:', error);
+        document.getElementById('feedbackCount').textContent = '?';
+      }
+    }
+
+    // ==================== FEEDBACK MANAGEMENT ====================
+    
+    let allFeedback = [];
+    
+    // Load feedback from Firebase
+    window.loadFeedback = async function() {
+      const container = document.getElementById('feedbackTableContainer');
+      if (!container) return;
+      
+      container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading feedback...</p></div>';
+      
+      try {
+        const { collection, query, orderBy, getDocs } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        
+        const feedbackQuery = query(
+          collection(db, 'beta_feedback'),
+          orderBy('submittedAt', 'desc')
+        );
+        
+        const snapshot = await getDocs(feedbackQuery);
+        allFeedback = [];
+        
+        snapshot.forEach(doc => {
+          allFeedback.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        console.log(`📬 Loaded ${allFeedback.length} feedback items`);
+        
+        // Update counts
+        updateFeedbackCounts();
+        
+        // Display feedback
+        filterFeedback();
+        
+        // Update main count
+        document.getElementById('feedbackCount').textContent = allFeedback.length;
+        
+      } catch (error) {
+        console.error('Failed to load feedback:', error);
+        container.innerHTML = `<div style="padding: 40px; text-align: center; color: #6b7280;">
+          <p>⚠️ Failed to load feedback</p>
+          <p style="font-size: 0.9rem;">${error.message}</p>
+          <button class="btn btn-primary btn-sm" onclick="loadFeedback()" style="margin-top: 12px;">Retry</button>
+        </div>`;
+      }
+    };
+    
+    // Update feedback counts
+    function updateFeedbackCounts() {
+      const newCount = allFeedback.filter(f => f.status === 'new' || !f.status).length;
+      const reviewingCount = allFeedback.filter(f => f.status === 'reviewing').length;
+      const resolvedCount = allFeedback.filter(f => f.status === 'resolved').length;
+      const bugCount = allFeedback.filter(f => f.category === 'bug').length;
+      const featureCount = allFeedback.filter(f => f.category === 'feature').length;
+      
+      document.getElementById('feedbackNewCount').textContent = newCount;
+      document.getElementById('feedbackReviewingCount').textContent = reviewingCount;
+      document.getElementById('feedbackResolvedCount').textContent = resolvedCount;
+      document.getElementById('feedbackBugCount').textContent = bugCount;
+      document.getElementById('feedbackFeatureCount').textContent = featureCount;
+    }
+    
+    // Filter and display feedback
+    window.filterFeedback = function() {
+      const statusFilter = document.getElementById('feedbackStatusFilter')?.value || 'all';
+      const categoryFilter = document.getElementById('feedbackCategoryFilter')?.value || 'all';
+      
+      let filtered = allFeedback;
+      
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'new') {
+          filtered = filtered.filter(f => f.status === 'new' || !f.status);
+        } else {
+          filtered = filtered.filter(f => f.status === statusFilter);
+        }
+      }
+      
+      if (categoryFilter !== 'all') {
+        filtered = filtered.filter(f => f.category === categoryFilter);
+      }
+      
+      document.getElementById('feedbackFilteredCount').textContent = filtered.length;
+      displayFeedback(filtered);
+    };
+    
+    // Display feedback items
+    function displayFeedback(items) {
+      const container = document.getElementById('feedbackTableContainer');
+      if (!container) return;
+      
+      if (items.length === 0) {
+        container.innerHTML = `<div style="padding: 60px; text-align: center; color: #6b7280;">
+          <p style="font-size: 3rem; margin-bottom: 16px;">📭</p>
+          <p>No feedback items found</p>
+        </div>`;
+        return;
+      }
+      
+      const categoryIcons = {
+        bug: '🐛',
+        feature: '💡',
+        general: '💭'
+      };
+      
+      const statusBadges = {
+        new: '<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:0.75rem;">🆕 New</span>',
+        reviewing: '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:0.75rem;">👀 Reviewing</span>',
+        resolved: '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:0.75rem;">✅ Resolved</span>',
+        wontfix: '<span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:0.75rem;">⏭️ Won\'t Fix</span>'
+      };
+      
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+          ${items.map(item => {
+            const date = item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'Unknown date';
+            const status = item.status || 'new';
+            const category = item.category || 'general';
+            const context = item.context || {};
+            
+            return `
+              <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;" data-feedback-id="${item.id}">
+                <div style="padding: 16px;">
+                  <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 1.5rem;">${categoryIcons[category] || '💭'}</span>
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <strong style="font-size: 1.1rem;">${escapeHtml(item.title || 'Untitled')}</strong>
+                        ${statusBadges[status] || statusBadges.new}
+                      </div>
+                      <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
+                        ${date} ${item.email ? `• ${escapeHtml(item.email)}` : '• Anonymous'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; white-space: pre-wrap; font-size: 0.95rem;">
+                    ${escapeHtml(item.details || 'No details provided')}
+                  </div>
+                  
+                  <details style="font-size: 0.85rem; color: #6b7280;">
+                    <summary style="cursor: pointer; padding: 8px 0;">📋 Technical Context</summary>
+                    <pre style="background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; margin-top: 8px;">${JSON.stringify(context, null, 2)}</pre>
+                  </details>
+                  
+                  <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                    <select onchange="updateFeedbackStatus('${item.id}', this.value)" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 0.85rem;">
+                      <option value="new" ${status === 'new' ? 'selected' : ''}>🆕 New</option>
+                      <option value="reviewing" ${status === 'reviewing' ? 'selected' : ''}>👀 Reviewing</option>
+                      <option value="resolved" ${status === 'resolved' ? 'selected' : ''}>✅ Resolved</option>
+                      <option value="wontfix" ${status === 'wontfix' ? 'selected' : ''}>⏭️ Won't Fix</option>
+                    </select>
+                    ${item.email ? `<button onclick="replyToFeedback('${item.id}')" class="btn btn-secondary btn-sm">📧 Reply</button>` : ''}
+                    <button onclick="deleteFeedback('${item.id}')" class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">🗑️ Delete</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+    
+    // Update feedback status
+    window.updateFeedbackStatus = async function(id, status) {
+      try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        
+        await updateDoc(doc(db, 'beta_feedback', id), {
+          status: status,
+          updatedAt: new Date().toISOString()
+        });
+        
+        // Update local data
+        const item = allFeedback.find(f => f.id === id);
+        if (item) item.status = status;
+        
+        updateFeedbackCounts();
+        showToast(`✅ Status updated to ${status}`, 'success');
+        
+      } catch (error) {
+        console.error('Failed to update status:', error);
+        showToast('❌ Failed to update status', 'error');
+      }
+    };
+    
+    // Reply to feedback via email
+    window.replyToFeedback = function(id) {
+      const item = allFeedback.find(f => f.id === id);
+      if (!item || !item.email) {
+        showToast('No email address available', 'error');
+        return;
+      }
+      
+      const subject = encodeURIComponent(`Re: Your Access Nature Feedback - ${item.title || 'Feedback'}`);
+      const body = encodeURIComponent(`Hi,\n\nThank you for your feedback about Access Nature!\n\nRegarding your ${item.category || 'feedback'}: "${item.title || 'Untitled'}"\n\n---\n\nBest regards,\nAccess Nature Team`);
+      
+      window.open(`mailto:${item.email}?subject=${subject}&body=${body}`, '_blank');
+    };
+    
+    // Delete feedback
+    window.deleteFeedback = async function(id) {
+      if (!confirm('Are you sure you want to delete this feedback?')) return;
+      
+      try {
+        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+        
+        await deleteDoc(doc(db, 'beta_feedback', id));
+        
+        // Remove from local data
+        allFeedback = allFeedback.filter(f => f.id !== id);
+        
+        updateFeedbackCounts();
+        filterFeedback();
+        
+        document.getElementById('feedbackCount').textContent = allFeedback.length;
+        showToast('✅ Feedback deleted', 'success');
+        
+      } catch (error) {
+        console.error('Failed to delete feedback:', error);
+        showToast('❌ Failed to delete feedback', 'error');
+      }
+    };
+    
+    // Escape HTML helper
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+  
+  <!-- Global Bottom Navigation -->
+  <script type="module">
+    import { initGlobalNav } from './src/components/globalNav.js';
+    
+    // Initialize bottom nav (only when main app is visible)
+    const mainApp = document.getElementById('mainApp');
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mainApp.style.display !== 'none') {
+          initGlobalNav({ currentPage: 'admin' });
+          observer.disconnect();
+        }
+      });
+    });
+    
+    observer.observe(mainApp, { attributes: true, attributeFilter: ['style'] });
+    
+    // Also check immediately in case already visible
+    if (mainApp.style.display !== 'none') {
+      initGlobalNav({ currentPage: 'admin' });
+    }
+  </script>
+  
+  <!-- High Contrast Toggle Handler -->
+  <script>
+    (function() {
+      var hcToggle = document.getElementById('highContrastToggle');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcToggle) {
+          var svg = hcToggle.querySelector('svg');
+          if (svg) {
+            svg.style.fill = isHC ? '#000' : '#fff';
+          }
+          hcToggle.style.background = isHC ? '#fff' : 'rgba(26, 26, 26, 0.95)';
+          hcToggle.style.borderColor = isHC ? '#000' : '#333';
+        }
+      }
+      
+      updateHCButton();
+      
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+      });
+    })();
+  </script>
+</body>
+</html>

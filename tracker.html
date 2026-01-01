@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Accessible - Trail Tracker</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#1a1a1a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- External CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
+  
+  <!-- App CSS -->
+  <link rel="stylesheet" href="src/css/design-system.css">
+  <link rel="stylesheet" href="src/css/base.css">
+  <link rel="stylesheet" href="src/css/layout.css">
+  <link rel="stylesheet" href="src/css/components.css">
+  <link rel="stylesheet" href="src/css/accessibility.css">
+  <link rel="stylesheet" href="src/css/themes.css">
+  <link rel="stylesheet" href="src/css/auth.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/ui-utilities.css">
+  <link rel="stylesheet" href="src/css/pwa.css">
+  <link rel="stylesheet" href="src/css/unified-nav.css">
+  <link rel="stylesheet" href="src/css/mobile-responsive.css">
+  <link rel="stylesheet" href="src/css/error-messages.css">
+  <!-- New tracker theme (Gaia-inspired) -->
+  <link rel="stylesheet" href="src/css/tracker-theme.css">
+  <link rel="stylesheet" href="src/css/global-nav.css">
+
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+/* WCAG Accessibility Styles */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus styles for all interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #2c5530;
+  outline-offset: 2px;
+}
+
+/* High contrast focus for dark backgrounds */
+.top-bar button:focus-visible,
+.floating-left button:focus-visible,
+.floating-right button:focus-visible {
+  outline: 3px solid #ffffff;
+  box-shadow: 0 0 0 5px rgba(44, 85, 48, 0.5);
+}
+
+/* Skip to main content link */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #2c5530;
+  color: white;
+  padding: 8px 16px;
+  z-index: 100000;
+  text-decoration: none;
+  font-weight: 500;
+  transform: translateY(-100%);
+  transition: transform 0.2s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    z-index: 10000;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #111827;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .nav-auth-indicator {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .nav-auth-indicator .auth-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border-radius: 16px;
+    font-size: 0.75rem;
+  }
+  .nav-auth-indicator .auth-status.signed-in {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  /* Desktop: show nav-menu inline */
+  .nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .nav-menu .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    color: #4b5563;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+  .nav-menu .nav-link:hover { background: #f3f4f6; }
+  .nav-menu .nav-link.active { background: #667eea; color: white; }
+  .nav-menu .nav-auth .btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+  
+  /* Hamburger button - hidden on desktop */
+  .menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    flex-shrink: 0;
+  }
+  .menu-toggle:focus {
+    outline: none !important;
+    background: transparent !important;
+  }
+  .hamburger-icon {
+    width: 24px;
+    height: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .hamburger-icon span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #374151;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+  }
+  .menu-toggle.active .hamburger-icon span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+  .menu-toggle.active .hamburger-icon span:nth-child(2) {
+    opacity: 0;
+  }
+  .menu-toggle.active .hamburger-icon span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
+  
+  /* Offset existing elements for nav */
+  #map-wrapper {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    z-index: 1;
+  }
+  /* Don't override #map-container - it needs its rotation-friendly positioning from layout.css */
+  .top-bar { top: 58px !important; }
+  .floating-left { top: 500px !important; }
+  .floating-right { top: 475px !important; }
+  
+  /* Hide old auth bar */
+  .auth-status-bar { display: none !important; }
+  
+  /* Compact weather widget for tracker */
+  .weather-container .weather-widget {
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .weather-container .weather-icon {
+    font-size: 1.8rem;
+  }
+  
+  .weather-container .weather-temp {
+    font-size: 1.5rem;
+  }
+  
+  .weather-container .weather-details {
+    font-size: 0.75rem;
+  }
+  
+  .weather-container .weather-header {
+    margin-bottom: 8px;
+  }
+  
+  /* Auth modal must be above everything */
+  .auth-modal {
+    z-index: 20000 !important;
+  }
+  .auth-modal-backdrop {
+    z-index: 19999 !important;
+  }
+  .auth-modal-container {
+    z-index: 20001 !important;
+  }
+  
+  /* Mobile nav styles now handled by unified-nav.css */
+  @media (max-width: 768px) {
+    /* Ensure proper alignment */
+    .top-nav {
+      align-items: center !important;
+    }
+    .nav-auth-indicator {
+      flex-shrink: 0;
+    }
+  }
+  
+  /* Disable native browser pull-to-refresh */
+  html, body {
+    overscroll-behavior-y: contain;
+  }
+  
+  /* When modals are open, prevent all overscroll */
+  body.modal-open,
+  body.tracking-active {
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+  }
+  
+  /* Prevent pull-to-refresh on modal overlays */
+  .modal-overlay,
+  .survey-modal,
+  .accessibility-survey-modal,
+  [role="dialog"] {
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  /* Compass Debug Panel */
+  .compass-debug-panel {
+    position: fixed;
+    bottom: 80px;
+    right: 10px;
+    width: 280px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+    font-size: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  .compass-debug-panel.hidden {
+    display: none;
+  }
+  .debug-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: bold;
+  }
+  .debug-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .debug-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .debug-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .debug-label {
+    color: #aaa;
+    font-size: 12px;
+  }
+  .debug-value {
+    font-family: monospace;
+    font-size: 14px;
+    color: #4CAF50;
+  }
+  .debug-cardinal {
+    background: #4CAF50;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  .debug-buttons {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .debug-btn {
+    flex: 1;
+    min-width: 50px;
+    padding: 8px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+  .debug-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  .debug-btn.primary {
+    width: 100%;
+    margin-top: 8px;
+    background: #4CAF50;
+    border-color: #4CAF50;
+    font-weight: bold;
+  }
+  .debug-btn.primary:active {
+    background: #388E3C;
+  }
+  .debug-instructions {
+    text-align: center;
+    margin-top: 8px;
+    color: #888;
+    font-size: 11px;
+  }
+  
+  /* Debug: Map center marker (shows where map thinks center is) */
+  .map-center-debug {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: red;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 0 10px rgba(255,0,0,0.5);
+  }
+  .map-center-debug::before,
+  .map-center-debug::after {
+    content: '';
+    position: absolute;
+    background: red;
+  }
+  .map-center-debug::before {
+    width: 40px;
+    height: 2px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .map-center-debug::after {
+    width: 2px;
+    height: 40px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .map-center-debug.hidden { display: none; }
+  
+</style>
+
+<!-- Analytics & Error Monitoring -->
+<script src="src/utils/monitoring.js" defer></script>
+</head>
+<body class="tracker-page">
+  <!-- Skip to main content link for keyboard users -->
+  <a href="#map-container" class="skip-link">Skip to map</a>
+  
+  <nav class="top-nav" role="navigation" aria-label="Main navigation">
+  <a href="index.html" class="nav-brand">♿ Accessible</a>
+  <div class="nav-auth-indicator">
+    <div class="auth-status" id="navAuthIndicator">
+      <span>👤</span>
+      <span id="navAuthStatusText">Guest</span>
+    </div>
+  </div>
+  <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
+    <span class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
+    </span>
+  </button>
+  <div class="nav-menu" id="navMenu">
+    <a href="index.html" class="nav-link">🏠 Home</a>
+    <a href="tracker.html" class="nav-link active">🗺️ Track</a>
+    <a href="reports.html" class="nav-link">📋 Reports</a>
+    <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;">👤 Profile</a>
+    <button class="nav-link" onclick="window.mobilityProfileUI?.open()" style="background: none; border: none; cursor: pointer; text-align: left;">
+      ♿ Mobility Profile
+    </button>
+    <div class="nav-auth">
+      <button id="navAuthBtn" class="btn">Sign In</button>
+    </div>
+  </div>
+</nav>
+
+<!-- High Contrast Toggle - Moved to left controls (leftControls) -->
+<!-- Hidden original button for backward compatibility -->
+<button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode for outdoor visibility" title="Toggle high contrast mode" style="display: none;">
+  <span class="toggle-icon">☀️</span>
+  <span class="toggle-text">High Contrast</span>
+</button>
+
+  <!-- Auth Status Bar -->
+  <div id="authStatusBar" class="auth-status-bar">
+    <div id="userInfo" class="user-info hidden">
+      <span class="user-greeting">Welcome, <span id="userEmail"></span>!</span>
+      <button id="logoutBtn" class="auth-btn logout-btn">Logout</button>
+    </div>
+    <div id="authPrompt" class="auth-prompt">
+      <button id="showAuthBtn" class="auth-btn login-btn">Sign In</button>
+    </div>
+  </div>
+
+  <!-- Auth Modal Helper Functions -->
+  <script>
+    function closeAuthModal() {
+      document.getElementById('authModal')?.classList.add('hidden');
+    }
+    function switchToSignup() {
+      document.getElementById('loginForm')?.classList.remove('active');
+      document.getElementById('signupForm')?.classList.add('active');
+    }
+    function switchToLogin() {
+      document.getElementById('signupForm')?.classList.remove('active');
+      document.getElementById('loginForm')?.classList.add('active');
+    }
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.setAttribute('aria-label', 'Show password');
+      }
+    }
+  </script>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="auth-modal hidden">
+    <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
+    <div class="auth-modal-container" role="dialog" aria-labelledby="authModalTitle" aria-modal="true">
+      <div class="auth-modal-header">
+        <h2 id="authModalTitle">Welcome to Accessible</h2>
+        <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close authentication modal">✕</button>
+      </div>
+      
+      <div class="auth-modal-content">
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-form active">
+          <div class="auth-form-header">
+            <h3>Sign In to Your Account</h3>
+            <p>Continue your accessibility mapping journey</p>
+          </div>
+          
+          <form class="auth-inputs" aria-label="Sign in form">
+            <div class="input-group">
+              <label for="loginEmail" class="visually-hidden">Email address</label>
+              <input type="email" id="loginEmail" placeholder="Email address" aria-label="Email address" required autocomplete="email">
+              <span class="input-icon" aria-hidden="true">📧</span>
+            </div>
+            
+            <div class="input-group password-group">
+              <label for="loginPassword" class="visually-hidden">Password</label>
+              <input type="password" id="loginPassword" placeholder="Password" aria-label="Password" required autocomplete="current-password">
+              <span class="input-icon" aria-hidden="true">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Show password">👁️</button>
+            </div>
+            
+            <button type="submit" id="loginBtn" class="auth-submit-btn">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Don't have an account? <button type="button" onclick="switchToSignup()" class="switch-btn">Sign up</button></p>
+          </div>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" class="auth-form">
+          <div class="auth-form-header">
+            <h3>Create Your Account</h3>
+            <p>Join the community making nature accessible</p>
+          </div>
+          
+          <form class="auth-inputs" aria-label="Create account form">
+            <div class="input-group">
+              <label for="signupName" class="visually-hidden">Full name</label>
+              <input type="text" id="signupName" placeholder="Full name" aria-label="Full name" required autocomplete="name">
+              <span class="input-icon" aria-hidden="true">👤</span>
+            </div>
+            
+            <div class="input-group">
+              <label for="signupEmail" class="visually-hidden">Email address</label>
+              <input type="email" id="signupEmail" placeholder="Email address" aria-label="Email address" required autocomplete="email">
+              <span class="input-icon" aria-hidden="true">📧</span>
+            </div>
+            
+            <div class="input-group password-group">
+              <label for="signupPassword" class="visually-hidden">Create password</label>
+              <input type="password" id="signupPassword" placeholder="Create password" aria-label="Create password" required autocomplete="new-password">
+              <span class="input-icon" aria-hidden="true">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Show password">👁️</button>
+            </div>
+            
+            <button type="submit" id="signupBtn" class="auth-submit-btn">
+              <span class="btn-text">Create Account</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Already have an account? <button type="button" onclick="switchToLogin()" class="switch-btn">Sign in</button></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cloud Sync Indicator -->
+  <div id="cloudSyncIndicator" class="cloud-sync-indicator hidden">
+    <span class="sync-icon">☁️</span>
+    <span class="sync-text">Syncing...</span>
+  </div>
+  
+  <!-- Map Wrapper (positioned for navbar) -->
+  <div id="map-wrapper">
+    <!-- Map Container (rotation-friendly positioning inside wrapper) -->
+    <main id="map-container" role="main" aria-label="Trail tracking map">
+      <div id="map" role="application" aria-label="Interactive map"></div>
+    </main>
+  </div>
+
+  <!-- ============================================
+       TOP CONTROL BAR: Start/Pause/Stop + Time + Distance
+       ============================================ -->
+  <div id="topControlBar" style="
+    position: fixed;
+    top: calc(var(--nav-height, 56px) + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(26, 26, 26, 0.95);
+    padding: 8px 12px;
+    border-radius: 28px;
+    z-index: 800;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+  ">
+    <!-- Start Button -->
+    <button id="startBtn" title="Start Tracking" aria-label="Start tracking" style="
+      width: 40px; height: 40px;
+      background: #4CAF50;
+      border: none; border-radius: 50%;
+      color: white; font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">▶</button>
+    
+    <!-- Pause Button -->
+    <button id="pauseBtn" title="Pause" aria-label="Pause tracking" style="
+      width: 40px; height: 40px;
+      background: #FF9800;
+      border: none; border-radius: 50%;
+      color: white; font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">⏸</button>
+    
+    <!-- Stop Button -->
+    <button id="stopBtn" title="Stop & Save" aria-label="Stop tracking" style="
+      width: 40px; height: 40px;
+      background: #f44336;
+      border: none; border-radius: 50%;
+      color: white; font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">⏹</button>
+    
+    <!-- Separator -->
+    <div style="width: 1px; height: 28px; background: rgba(255,255,255,0.3); margin: 0 4px;"></div>
+    
+    <!-- Timer -->
+    <div style="display: flex; flex-direction: column; align-items: center; min-width: 65px;">
+      <span id="timer" style="font-size: 16px; font-weight: 700; color: white; font-variant-numeric: tabular-nums;">00:00:00</span>
+      <span style="font-size: 9px; color: #888; text-transform: uppercase;">Time</span>
+    </div>
+    
+    <!-- Separator -->
+    <div style="width: 1px; height: 28px; background: rgba(255,255,255,0.3); margin: 0 4px;"></div>
+    
+    <!-- Distance -->
+    <div style="display: flex; flex-direction: column; align-items: center; min-width: 60px;">
+      <span id="distance" style="font-size: 16px; font-weight: 700; color: white; font-variant-numeric: tabular-nums;">0.00 km</span>
+      <span style="font-size: 9px; color: #888; text-transform: uppercase;">Dist</span>
+    </div>
+  </div>
+
+  <!-- ============================================
+       SECOND ROW: Heading + Compass + Accessibility Survey
+       ============================================ -->
+  <div id="secondRowControls" style="
+    position: fixed;
+    top: calc(var(--nav-height, 56px) + 70px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 750;
+  ">
+    <!-- Combined Heading Display with Compass -->
+    <div id="headingDisplay" style="
+      background: rgba(26, 26, 26, 0.95);
+      padding: 4px 8px 4px 4px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    ">
+      <!-- Compass (inside heading display) -->
+      <div id="compass" style="
+        width: 36px; height: 36px;
+        background: #1a1a1a;
+        border: 2px solid #333;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        cursor: pointer;
+        flex-shrink: 0;
+      " title="Tap 3x for debug" aria-label="Compass">
+        <!-- Custom needle container (different ID to avoid CSS conflicts) -->
+        <div id="compass-needle-new" style="
+          width: 100%; height: 100%;
+          position: absolute;
+          transition: transform 0.15s ease-out;
+        ">
+          <!-- North (red triangle pointing up) -->
+          <div style="
+            position: absolute;
+            top: 5px; left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 12px solid #f44336;
+          "></div>
+          <!-- South (white triangle pointing down) -->
+          <div style="
+            position: absolute;
+            bottom: 5px; left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 12px solid #ffffff;
+          "></div>
+        </div>
+        <div id="compass-center" style="
+          width: 4px; height: 4px;
+          background: #666;
+          border-radius: 50%;
+          z-index: 2;
+        "></div>
+      </div>
+      
+      <!-- Heading value -->
+      <span id="headingValue" style="font-size: 16px; font-weight: 700; color: white; min-width: 42px; text-align: right;">---°</span>
+    </div>
+    
+    <!-- Accessibility Survey Button (blue round) -->
+    <button id="accessibilitySurveyBtn" onclick="openAccessibilityForm()" title="Accessibility Survey" aria-label="Open accessibility survey" style="
+      width: 36px; height: 36px;
+      background: #2196F3;
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
+    ">♿</button>
+  </div>
+
+  <!-- Compass Debug Panel (tap compass 3x to toggle) -->
+  <div id="compass-debug-panel" class="compass-debug-panel hidden">
+    <div class="debug-header">
+      <span>🧭 Compass Debug</span>
+      <button id="close-debug-panel" class="debug-close-btn">✕</button>
+    </div>
+    <div class="debug-content">
+      <div class="debug-row">
+        <span class="debug-label">Heading:</span>
+        <span id="debug-heading" class="debug-value">--°</span>
+        <span id="debug-cardinal" class="debug-cardinal">--</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Alpha:</span>
+        <span id="debug-alpha" class="debug-value">--</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Beta:</span>
+        <span id="debug-beta" class="debug-value">--</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Gamma:</span>
+        <span id="debug-gamma" class="debug-value">--</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Offset:</span>
+        <span id="debug-offset" class="debug-value">0°</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Source:</span>
+        <span id="debug-source" class="debug-value">--</span>
+      </div>
+      <div class="debug-row" style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">
+        <span class="debug-label">Map rotation:</span>
+        <span id="debug-map-offset" class="debug-value" style="font-size: 11px;">--</span>
+      </div>
+      <div class="debug-buttons">
+        <button id="calibrate-minus90" class="debug-btn">-90°</button>
+        <button id="calibrate-minus45" class="debug-btn">-45°</button>
+        <button id="calibrate-reset" class="debug-btn">Reset</button>
+        <button id="calibrate-plus45" class="debug-btn">+45°</button>
+        <button id="calibrate-plus90" class="debug-btn">+90°</button>
+      </div>
+      <button id="calibrate-north" class="debug-btn primary">📍 Set Current as North</button>
+      <button id="toggle-center-marker" class="debug-btn">🎯 Show Center Marker</button>
+      <div class="debug-instructions">
+        <small>Face true north, then tap "Set Current as North" to calibrate.<br>
+        Center marker shows if map is properly centered.</small>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Debug center marker -->
+  <div id="map-center-debug" class="map-center-debug hidden"></div>
+
+  <!-- ============================================
+       LEFT CONTROLS: Zoom, Center, Rotation
+       ============================================ -->
+  <div id="leftControls" style="
+    position: fixed;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 700;
+  ">
+    <!-- Zoom In -->
+    <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 10px;
+      color: white; font-size: 22px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+    </button>
+    
+    <!-- Zoom Out -->
+    <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 10px;
+      color: white; font-size: 22px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M19 13H5v-2h14v2z"/>
+      </svg>
+    </button>
+    
+    <!-- Separator -->
+    <div style="height: 8px;"></div>
+    
+    <!-- Center to Location -->
+    <button id="centerBtn" title="Center on my location" aria-label="Center map on my location" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+      </svg>
+    </button>
+    
+    <!-- Toggle Map Rotation -->
+    <button id="toggleBtn" title="Toggle Rotation" aria-label="Toggle map rotation" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3L20 17H4L12 3Z"/>
+      </svg>
+    </button>
+    
+    <!-- High Contrast Toggle (positioned under map rotate) -->
+    <button id="highContrastToggleTracker" title="Toggle High Contrast" aria-label="Toggle high contrast mode" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ============================================
+       RIGHT CONTROLS: Media + Safety + More
+       ============================================ -->
+  <div id="rightControls" style="
+    position: fixed;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 700;
+  ">
+    <!-- Take Photo -->
+    <button id="takePhotoBtn" title="Take Photo" aria-label="Take photo" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <circle cx="12" cy="12" r="3.2"/>
+        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+      </svg>
+    </button>
+    
+    <!-- Add Note -->
+    <button id="addNoteBtn" onclick="addTextNote()" title="Add Note" aria-label="Add text note" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+      </svg>
+    </button>
+    
+    <!-- Separator -->
+    <div style="height: 8px;"></div>
+    
+    <!-- Safety -->
+    <button id="safetyPanelBtn" onclick="togglePanel('safetyPanel')" title="Safety Options" aria-label="Safety options" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+      </svg>
+    </button>
+    
+    <!-- More Options -->
+    <button id="moreOptionsBtn" onclick="togglePanel('moreOptionsPanel')" title="More Options" aria-label="More options" style="
+      width: 44px; height: 44px;
+      background: rgba(26, 26, 26, 0.95);
+      border: 1px solid #333;
+      border-radius: 50%;
+      color: white; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <circle cx="12" cy="12" r="2"/>
+        <circle cx="12" cy="5" r="2"/>
+        <circle cx="12" cy="19" r="2"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Weather Widget Container -->
+  <div id="weatherContainer" class="weather-container" style="position: fixed; top: 130px; right: 70px; z-index: 600; max-width: 180px;"></div>
+
+  <!-- NOTE: SOS button is created dynamically by safetyFeatures.js -->
+  <!-- NOTE: Beta feedback button is created dynamically by betaFeedback.js -->
+  <!-- Both will need repositioning when bottom nav is added -->
+
+  <!-- LEGACY: Keep old bottom nav hidden for compatibility -->
+  <div id="bottomNav" class="bottom-nav hidden" role="navigation" aria-label="Feature panels">
+    <button class="nav-button" onclick="togglePanel('exportPanel')" aria-label="Open export panel">Export</button>
+    <button class="nav-button" onclick="togglePanel('summaryPanel')" aria-label="Open routes panel">Routes</button>
+    <button class="nav-button" onclick="togglePanel('trailGuidePanel')" aria-label="Open trail guides panel">Guides</button>
+    <button class="nav-button" onclick="togglePanel('safetyPanel')" aria-label="Open safety panel">Safety</button>
+  </div>
+  </div>
+
+  <!-- More Options Panel -->
+  <div id="moreOptionsPanel" class="bottom-popup hidden" style="max-height: 60vh; overflow-y: auto;">
+    <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: 600; color: #fff;">More Options</span>
+      <button onclick="togglePanel('moreOptionsPanel')" style="background: none; border: none; color: #fff; font-size: 18px; cursor: pointer;">✕</button>
+    </div>
+    
+    <div style="padding: 8px;">
+      <div style="font-size: 11px; color: #888; padding: 4px 8px; margin-bottom: 4px;">VIEW</div>
+      <button id="fullscreenToggleBtn" onclick="toggleFullscreenMode()">⛶ Toggle Fullscreen</button>
+    </div>
+    
+    <div style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="font-size: 11px; color: #888; padding: 4px 8px; margin-bottom: 4px;">SAVE & EXPORT</div>
+      <button id="saveToCloudBtn" class="cloud-save-btn">☁️ Save to Cloud</button>
+      <button id="prepareAndExportBtn">📦 Export Route</button>
+      <button id="exportGPXBtn">📍 Export GPX</button>
+      <button id="exportPDFBtn">📄 Export PDF</button>
+      <button id="exportSummaryBtn">🌐 Export Trail Guide</button>
+    </div>
+    
+    <div style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="font-size: 11px; color: #888; padding: 4px 8px; margin-bottom: 4px;">MY DATA</div>
+      <button id="loadCloudRoutesBtn" class="cloud-load-btn">☁️ Load My Routes</button>
+      <button id="loadMyGuidesBtn" class="cloud-load-btn">🌐 Load My Guides</button>
+      <button onclick="offlineSync?.showPendingUploadsModal()">📦 Local Storage</button>
+      <button onclick="offlineMapsUI?.openModal()">📥 Offline Maps</button>
+    </div>
+    
+    <div style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="font-size: 11px; color: #888; padding: 4px 8px; margin-bottom: 4px;">TOOLS</div>
+      <button onclick="triggerImport()">📥 Import Route</button>
+      <button id="clearAllSessionsBtn">🗑️ Clear Routes</button>
+    </div>
+  </div>
+
+  <!-- Export Panel (legacy, kept for compatibility) -->
+  <div id="exportPanel" class="bottom-popup hidden">
+    <button id="prepareAndExportBtn2">📦 Export Route</button>
+    <button id="exportGPXBtn2">📍 Export GPX</button>
+    <button id="exportPDFBtn2">📄 Export PDF</button>
+    <button id="exportSummaryBtn2">🌐 Export Trail Guide</button>
+    <button id="saveToCloudBtn2" class="cloud-save-btn">☁️ Save to Cloud</button>
+  </div>
+
+  <!-- Summary Panel (legacy, kept for compatibility) -->
+  <div id="summaryPanel" class="bottom-popup hidden">
+    <button id="loadCloudRoutesBtn2" class="cloud-load-btn">☁️ Load My Routes</button>
+    <button id="loadMyGuidesBtn2" class="cloud-load-btn">🌐 Load My Guides</button>
+    <button onclick="offlineSync?.showPendingUploadsModal()">📦 Local Storage</button>
+    <button id="clearAllSessionsBtn2">🗑️ Clear Routes</button>
+    <button id="clearAllAppDataBtn">🧹 Clear Everything</button>
+  </div>
+  
+  <!-- Safety Panel -->
+  <div id="safetyPanel" class="bottom-popup hidden">
+    <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: 600; color: #fff;">🛡️ Safety Options</span>
+      <button onclick="togglePanel('safetyPanel')" style="background: none; border: none; color: #fff; font-size: 18px; cursor: pointer;">✕</button>
+    </div>
+    <button onclick="safetyFeatures?.openEmergencyModal()">🆘 Emergency SOS</button>
+    <button onclick="safetyFeatures?.startLifeline()">📡 Start Lifeline</button>
+    <button onclick="safetyFeatures?.manageContacts()">👥 Emergency Contacts</button>
+    <button onclick="safetyFeatures?.showCurrentWeather('weatherContainer')">🌤️ Check Weather</button>
+    <button onclick="trailConditions?.quickReportCondition()">🚧 Report Conditions</button>
+    <button onclick="trailConditions?.showNearbyConditions()">📍 Nearby Conditions</button>
+    <button onclick="trailAlerts?.showSettingsModal()">⚠️ Alert Settings</button>
+  </div>
+
+  <!-- Dev Tools Panel -->
+  <div id="devToolsPanel" class="bottom-popup hidden">
+    <button onclick="showStorageMonitor()">🧪 Storage Monitor</button>
+    <button onclick="triggerImport()">📥 Import Route</button>
+    <button id="resetBtn" onclick="confirmAndResetApp()">🔄 Reset App</button>
+  </div>
+
+  <!-- Trail Guide Panel (kept for compatibility) -->
+  <div id="trailGuidePanel" class="bottom-popup hidden">
+    <h3>🌐 My Trail Guides</h3>
+    <button id="loadMyGuidesBtn3">📂 Load My Guides</button>
+    <div id="myGuidesList" class="guides-list">
+      <!-- Dynamically populated -->
+    </div>
+  </div>
+
+  <!-- Accessibility Form Modal -->
+  <div id="accessibilityOverlay" class="overlay hidden">
+    <div id="accessibilityFormContainer" class="modal-container"></div>
+  </div>
+
+  <!-- Hidden File Inputs -->
+  <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden" aria-label="Take or select photo">
+  <input type="file" id="importFile" accept=".json,.gpx" class="hidden" aria-label="Import route file">
+
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+  <!-- IMMEDIATE UI Handlers - No module dependencies -->
+  <script>
+    (function() {
+      // Hamburger Menu - Immediate handler
+      var menuToggle = document.getElementById('menuToggle');
+      var navMenu = document.getElementById('navMenu');
+      
+      console.log('[NAV] menuToggle:', menuToggle);
+      console.log('[NAV] navMenu:', navMenu);
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+        console.log('[NAV] Menu closed');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+        console.log('[NAV] Menu toggled, navMenu.classList:', navMenu?.classList.toString());
+        console.log('[NAV] navMenu display:', window.getComputedStyle(navMenu).display);
+      });
+      
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+      
+      // High Contrast Toggle - Immediate handler
+      var hcToggle = document.getElementById('highContrastToggle');
+      var hcText = hcToggle?.querySelector('.toggle-text');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcText) hcText.textContent = isHC ? 'Normal' : 'High Contrast';
+      }
+      
+      updateHCButton();
+      
+      // Mark as initialized to prevent module from adding duplicate listener
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        if (navigator.vibrate) navigator.vibrate(10);
+      });
+    })();
+  </script>
+
+  <!-- App JavaScript -->
+  <script type="module" src="src/main.js"></script>
+  <script type="module" src="src/features/auth.js"></script>
+  <script type="module" src="src/ui/displayPreferences.js"></script>
+  <script type="module" src="src/features/safetyFeatures.js"></script>
+  <script type="module" src="src/features/trailConditions.js"></script>
+  <script type="module" src="src/features/trailAlerts.js"></script>
+  <script type="module" src="src/features/offlineSync.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
+  <script type="module" src="src/pwa/offlineMapsUI.js"></script>
+  
+  <!-- Global Bottom Navigation -->
+  <script type="module">
+    import { initGlobalNav } from './src/components/globalNav.js';
+    
+    // Initialize bottom nav
+    const globalNav = initGlobalNav({ currentPage: 'tracker' });
+    
+    // Expose toggle function for fullscreen button
+    window.toggleBottomNav = () => {
+      globalNav.toggle();
+      // Dispatch event for other components
+      window.dispatchEvent(new CustomEvent('fullscreenToggle', { 
+        detail: { fullscreen: globalNav.isHidden }
+      }));
+    };
+  </script>
+
+  <script type="module">
+  // Check if redirected for sign-in
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('signin') === 'true') {
+    // Remove the parameter from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    // Open auth modal after a brief delay to let page load
+    setTimeout(() => {
+      const authModal = document.getElementById('authModal');
+      if (authModal) {
+        authModal.classList.remove('hidden');
+      }
+    }, 500);
+  }
+  
+  // Expose openAuthModal globally for bottom nav
+  window.openAuthModal = () => {
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+      authModal.classList.remove('hidden');
+    }
+  };
+  
+  // Auth setup (hamburger menu is handled in IMMEDIATE UI Handlers above)
+  try {
+    const { auth } = await import('./firebase-setup.js');
+    const { onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js');
+    
+    // Auth state
+    onAuthStateChanged(auth, async (user) => {
+      const indicator = document.getElementById('navAuthIndicator');
+      const text = document.getElementById('navAuthStatusText');
+      const btn = document.getElementById('navAuthBtn');
+      
+      if (user) {
+        // Verify user still exists on server
+        try {
+          await user.reload();
+        } catch (reloadError) {
+          console.error('❌ User session invalid:', reloadError.message);
+          // Sign out the deleted user
+          try {
+            await signOut(auth);
+          } catch (e) {}
+          return;
+        }
+        
+        indicator?.classList.add('signed-in');
+        if (text) text.textContent = user.displayName || user.email?.split('@')[0];
+        if (btn) {
+          btn.textContent = 'Sign Out';
+          btn.onclick = () => {
+            if (confirm('Sign out of Access Nature?')) {
+              signOut(auth);
+            }
+          };
+        }
+      } else {
+        indicator?.classList.remove('signed-in');
+        if (text) text.textContent = 'Guest';
+        if (btn) {
+          btn.textContent = 'Sign In';
+          btn.onclick = () => {
+            // Open existing auth modal instead of Google popup
+            const authModal = document.getElementById('authModal');
+            if (authModal) {
+              authModal.classList.remove('hidden');
+            } else {
+              // Fallback: try clicking the existing sign in button
+              document.getElementById('showAuthBtn')?.click();
+            }
+          };
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ Firebase auth setup failed:', error);
+    // Even if Firebase fails, the hamburger menu still works
+    const btn = document.getElementById('navAuthBtn');
+    if (btn) {
+      btn.textContent = 'Sign In';
+      btn.onclick = () => {
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+          authModal.classList.remove('hidden');
+        }
+      };
+    }
+  }
+
+  // ============================================
+  // COMPASS DEBUG PANEL
+  // Triple-tap compass to toggle debug panel
+  // ============================================
+  (function initCompassDebug() {
+    const compass = document.getElementById('compass');
+    const debugPanel = document.getElementById('compass-debug-panel');
+    const closeBtn = document.getElementById('close-debug-panel');
+    
+    if (!compass || !debugPanel) return;
+    
+    let tapCount = 0;
+    let tapTimer = null;
+    let debugUpdateInterval = null;
+    let lastOrientationEvent = null;
+    
+    // Triple-tap compass to toggle debug panel
+    compass.addEventListener('click', () => {
+      tapCount++;
+      clearTimeout(tapTimer);
+      
+      if (tapCount >= 3) {
+        tapCount = 0;
+        toggleDebugPanel();
+      } else {
+        tapTimer = setTimeout(() => { tapCount = 0; }, 500);
+      }
+    });
+    
+    // Close button
+    closeBtn?.addEventListener('click', () => {
+      debugPanel.classList.add('hidden');
+      stopDebugUpdates();
+    });
+    
+    function toggleDebugPanel() {
+      const isHidden = debugPanel.classList.toggle('hidden');
+      if (!isHidden) {
+        startDebugUpdates();
+      } else {
+        stopDebugUpdates();
+      }
+    }
+    
+    function startDebugUpdates() {
+      // Listen to orientation events for debug display (separate from compass controller)
+      window.addEventListener('deviceorientation', handleDebugOrientation, true);
+      window.addEventListener('deviceorientationabsolute', handleDebugOrientation, true);
+      
+      // Update display every 100ms
+      debugUpdateInterval = setInterval(updateDebugDisplay, 100);
+      updateDebugDisplay();
+    }
+    
+    function stopDebugUpdates() {
+      window.removeEventListener('deviceorientation', handleDebugOrientation, true);
+      window.removeEventListener('deviceorientationabsolute', handleDebugOrientation, true);
+      clearInterval(debugUpdateInterval);
+    }
+    
+    function handleDebugOrientation(event) {
+      lastOrientationEvent = event;
+    }
+    
+    function getCompassController() {
+      // Try multiple paths to find compass controller
+      return window.AccessNatureApp?.controllers?.compass || 
+             window.compassController ||
+             null;
+    }
+    
+    function updateDebugDisplay() {
+      const compassCtrl = getCompassController();
+      const rotationEnabled = compassCtrl?.isRotationEnabled || false;
+      
+      // Update heading from compass controller OR calculate from raw event
+      const headingEl = document.getElementById('debug-heading');
+      const cardinalEl = document.getElementById('debug-cardinal');
+      
+      if (compassCtrl && rotationEnabled && headingEl) {
+        // Use compass controller's processed heading
+        headingEl.textContent = compassCtrl.currentHeading.toFixed(1) + '°';
+        cardinalEl.textContent = compassCtrl.getCardinalDirection();
+        cardinalEl.style.background = '#4CAF50';
+      } else if (lastOrientationEvent && headingEl) {
+        // Calculate heading directly from event for display
+        const alpha = lastOrientationEvent.alpha;
+        if (alpha !== null && alpha !== undefined) {
+          const heading = (360 - alpha) % 360;
+          headingEl.textContent = heading.toFixed(1) + '° (raw)';
+          const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+          cardinalEl.textContent = directions[Math.round(heading / 45) % 8];
+          cardinalEl.style.background = '#FF9800'; // Orange = raw/uncalibrated
+        }
+      } else if (headingEl) {
+        headingEl.textContent = rotationEnabled ? 'waiting...' : 'rotation off';
+        cardinalEl.textContent = '--';
+        cardinalEl.style.background = '#666';
+      }
+      
+      // Update raw alpha/beta/gamma values
+      if (lastOrientationEvent) {
+        const e = lastOrientationEvent;
+        document.getElementById('debug-alpha').textContent = e.alpha?.toFixed(1) ?? '--';
+        document.getElementById('debug-beta').textContent = e.beta?.toFixed(1) ?? '--';
+        document.getElementById('debug-gamma').textContent = e.gamma?.toFixed(1) ?? '--';
+        
+        // Show event type
+        const sourceEl = document.getElementById('debug-source');
+        if (sourceEl) {
+          const isAbs = e.type === 'deviceorientationabsolute';
+          const hasAbsFlag = e.absolute === true;
+          let sourceText = isAbs ? 'absolute' : (hasAbsFlag ? 'rel+abs' : 'relative');
+          
+          // Show compass controller's locked type if available
+          if (compassCtrl && compassCtrl.eventType) {
+            sourceText += ` [${compassCtrl.eventType}]`;
+          }
+          if (!rotationEnabled) {
+            sourceText += ' (off)';
+          }
+          sourceEl.textContent = sourceText;
+        }
+      } else {
+        document.getElementById('debug-alpha').textContent = 'no events';
+        document.getElementById('debug-beta').textContent = '--';
+        document.getElementById('debug-gamma').textContent = '--';
+        document.getElementById('debug-source').textContent = 'waiting...';
+      }
+      
+      // Update calibration offset
+      const offsetEl = document.getElementById('debug-offset');
+      if (offsetEl) {
+        if (compassCtrl) {
+          offsetEl.textContent = compassCtrl.calibrationOffset.toFixed(0) + '°';
+        } else {
+          offsetEl.textContent = 'N/A';
+        }
+      }
+      
+      // Update map container offset info
+      const mapOffsetEl = document.getElementById('debug-map-offset');
+      if (mapOffsetEl) {
+        const container = document.getElementById('map-container');
+        if (container) {
+          const style = window.getComputedStyle(container);
+          const transform = style.transform;
+          let rotStr = '0';
+          if (transform && transform !== 'none') {
+            // Extract rotation from matrix
+            const match = transform.match(/matrix\(([^)]+)\)/);
+            if (match) {
+              const values = match[1].split(',').map(parseFloat);
+              const angle = Math.round(Math.atan2(values[1], values[0]) * (180 / Math.PI));
+              rotStr = angle + '°';
+            }
+          }
+          mapOffsetEl.textContent = `rot:${rotStr}`;
+        }
+      }
+    }
+    
+    // Calibration buttons
+    document.getElementById('calibrate-minus90')?.addEventListener('click', () => {
+      const ctrl = getCompassController();
+      if (ctrl) {
+        ctrl.adjustCalibration(-90);
+        showCalibrationFeedback(-90);
+      }
+    });
+    document.getElementById('calibrate-minus45')?.addEventListener('click', () => {
+      const ctrl = getCompassController();
+      if (ctrl) {
+        ctrl.adjustCalibration(-45);
+        showCalibrationFeedback(-45);
+      }
+    });
+    document.getElementById('calibrate-reset')?.addEventListener('click', () => {
+      const ctrl = getCompassController();
+      if (ctrl) {
+        ctrl.calibrationOffset = 0;
+        showCalibrationFeedback('reset');
+      }
+    });
+    document.getElementById('calibrate-plus45')?.addEventListener('click', () => {
+      const ctrl = getCompassController();
+      if (ctrl) {
+        ctrl.adjustCalibration(45);
+        showCalibrationFeedback(45);
+      }
+    });
+    document.getElementById('calibrate-plus90')?.addEventListener('click', () => {
+      const ctrl = getCompassController();
+      if (ctrl) {
+        ctrl.adjustCalibration(90);
+        showCalibrationFeedback(90);
+      }
+    });
+    document.getElementById('calibrate-north')?.addEventListener('click', () => {
+      const ctrl = getCompassController();
+      if (ctrl) {
+        ctrl.calibrateToNorth();
+      } else {
+        alert('Compass controller not found. Make sure rotation is enabled.');
+      }
+    });
+    
+    function showCalibrationFeedback(amount) {
+      const offsetEl = document.getElementById('debug-offset');
+      if (offsetEl) {
+        offsetEl.style.color = '#4CAF50';
+        setTimeout(() => { offsetEl.style.color = ''; }, 300);
+      }
+      updateDebugDisplay();
+    }
+    
+    // Center marker toggle
+    const centerMarker = document.getElementById('map-center-debug');
+    const centerMarkerBtn = document.getElementById('toggle-center-marker');
+    centerMarkerBtn?.addEventListener('click', () => {
+      const isHidden = centerMarker?.classList.toggle('hidden');
+      centerMarkerBtn.textContent = isHidden ? '🎯 Show Center' : '🎯 Hide Center';
+    });
+    
+    console.log('🧭 Compass debug panel ready (triple-tap compass to open)');
+  })();
+
+  // ============================================
+  // TRACKER UI CONTROLS INITIALIZATION
+  // ============================================
+  (function initTrackerControls() {
+    console.log('[TrackerUI] Initializing controls...');
+    
+    // Add tracker-page class for styling
+    document.body.classList.add('tracker-page');
+    
+    // Wait for app to be ready
+    function waitForApp(callback, maxAttempts = 50) {
+      let attempts = 0;
+      const check = () => {
+        attempts++;
+        if (window.AccessNatureApp?.controllers?.map?.map) {
+          callback();
+        } else if (attempts < maxAttempts) {
+          setTimeout(check, 100);
+        } else {
+          console.warn('[TrackerUI] App not ready after timeout');
+        }
+      };
+      check();
+    }
+    
+    // ===== ZOOM CONTROLS =====
+    document.getElementById('zoomInBtn')?.addEventListener('click', () => {
+      const map = window.AccessNatureApp?.controllers?.map?.map;
+      if (map) {
+        map.zoomIn();
+        console.log('[TrackerUI] Zoom in');
+      } else {
+        console.warn('[TrackerUI] Map not ready for zoom');
+      }
+    });
+    
+    document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
+      const map = window.AccessNatureApp?.controllers?.map?.map;
+      if (map) {
+        map.zoomOut();
+        console.log('[TrackerUI] Zoom out');
+      } else {
+        console.warn('[TrackerUI] Map not ready for zoom');
+      }
+    });
+    
+    // ===== CENTER TO LOCATION =====
+    document.getElementById('centerBtn')?.addEventListener('click', () => {
+      console.log('[TrackerUI] Center button clicked');
+      
+      const mapCtrl = window.AccessNatureApp?.controllers?.map;
+      const trackingCtrl = window.AccessNatureApp?.controllers?.tracking;
+      const map = mapCtrl?.map;
+      
+      if (!map) {
+        console.warn('[TrackerUI] Map not available yet');
+        window.toast?.warning('Map still loading...');
+        return;
+      }
+      
+      // Try to get current tracked position first
+      if (trackingCtrl?.currentPosition) {
+        const pos = trackingCtrl.currentPosition;
+        map.setView([pos.latitude, pos.longitude], map.getZoom());
+        console.log('[TrackerUI] Centered on tracking position');
+        return;
+      }
+      
+      // Otherwise get fresh GPS position
+      if (navigator.geolocation) {
+        window.toast?.show('Getting your location...');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            map.setView([pos.coords.latitude, pos.coords.longitude], map.getZoom());
+            console.log('[TrackerUI] Centered on GPS position:', pos.coords.latitude, pos.coords.longitude);
+            window.toast?.success('Centered on your location');
+          },
+          (err) => {
+            console.warn('[TrackerUI] Geolocation error:', err.message);
+            window.toast?.warning('Could not get your location: ' + err.message);
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      } else {
+        window.toast?.error('Geolocation not supported');
+      }
+    });
+    
+    // ===== TOGGLE ROTATION BUTTON =====
+    const toggleBtn = document.getElementById('toggleBtn');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        // The compass controller handles the actual toggle
+        // We just update the visual state
+        setTimeout(() => {
+          const compassCtrl = window.AccessNatureApp?.controllers?.compass;
+          if (compassCtrl?.isRotationEnabled) {
+            toggleBtn.style.background = '#4CAF50';
+            toggleBtn.style.borderColor = '#4CAF50';
+          } else {
+            toggleBtn.style.background = 'rgba(26, 26, 26, 0.95)';
+            toggleBtn.style.borderColor = '#333';
+          }
+        }, 100);
+      });
+    }
+    
+    // ===== HEADING DISPLAY - ALWAYS ACTIVE =====
+    // Uses device orientation directly, independent of map rotation toggle
+    let currentHeading = 0;
+    let headingEventType = null;
+    let orientationListenersActive = false;
+    
+    // Some Android devices (especially Xiaomi) have a known 45-degree offset
+    // This can be adjusted here if needed
+    const HEADING_OFFSET_CORRECTION = 0; // Set to 45 or -45 if needed
+    
+    function handleDeviceOrientation(event) {
+      // Lock to first event type received
+      if (!headingEventType && (event.alpha !== null || event.webkitCompassHeading !== undefined)) {
+        headingEventType = event.absolute ? 'absolute' : 'relative';
+        const hasWebkit = typeof event.webkitCompassHeading !== 'undefined';
+        console.log('[HeadingDisplay] ✓ Source:', hasWebkit ? 'webkitCompassHeading (iOS)' : 'alpha (Android)', '| Type:', headingEventType);
+      }
+      
+      // Only process matching event type (prefer absolute)
+      const isAbsolute = event.absolute === true || event.type === 'deviceorientationabsolute';
+      if (headingEventType === 'absolute' && !isAbsolute) {
+        return; // Ignore relative events if we have absolute
+      }
+      
+      let heading = null;
+      
+      // iOS Safari: webkitCompassHeading gives direct compass heading
+      // Already follows convention: 0=N, 90=E, 180=S, 270=W, increases clockwise
+      if (typeof event.webkitCompassHeading !== 'undefined' && event.webkitCompassHeading !== null) {
+        heading = event.webkitCompassHeading;
+      }
+      // Android/Other: Use alpha value
+      else if (event.alpha !== null && event.alpha !== undefined) {
+        // Convert alpha (counter-clockwise) to compass heading (clockwise)
+        heading = (360 - event.alpha) % 360;
+        
+        // Adjust for screen orientation (landscape/portrait)
+        // window.orientation is deprecated but still needed for some devices
+        let screenAngle = 0;
+        if (window.screen?.orientation?.angle !== undefined) {
+          screenAngle = window.screen.orientation.angle;
+        } else if (window.orientation !== undefined) {
+          // window.orientation: 0=portrait, 90=landscape-left, -90=landscape-right, 180=upside-down
+          screenAngle = window.orientation;
+        }
+        
+        if (screenAngle !== 0) {
+          heading = (heading - screenAngle + 360) % 360;
+        }
+        
+        // Apply device-specific correction if needed
+        if (HEADING_OFFSET_CORRECTION !== 0) {
+          heading = (heading + HEADING_OFFSET_CORRECTION + 360) % 360;
+        }
+      }
+      
+      if (heading !== null) {
+        // Smooth the heading
+        let diff = heading - currentHeading;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        currentHeading = ((currentHeading + diff * 0.15) % 360 + 360) % 360;
+      }
+    }
+    
+    // Track cumulative needle rotation to avoid 360° spins at north crossing
+    let needleRotation = 0;
+    
+    function updateHeadingDisplay() {
+      const headingEl = document.getElementById('headingValue');
+      const needleEl = document.getElementById('compass-needle-new');
+      
+      if (headingEl) {
+        const heading = Math.round(currentHeading);
+        headingEl.textContent = `${heading}°`;
+        
+        // Update compass needle rotation (point north)
+        // Use continuous rotation to avoid 360° spin when crossing north
+        if (needleEl) {
+          const targetRotation = -heading;
+          
+          // Calculate shortest path to target rotation
+          let diff = targetRotation - (needleRotation % 360);
+          if (diff > 180) diff -= 360;
+          if (diff < -180) diff += 360;
+          
+          // Update cumulative rotation (allows going beyond 0-360)
+          needleRotation += diff;
+          
+          needleEl.style.transform = `rotate(${needleRotation}deg)`;
+        }
+      }
+    }
+    
+    // Add orientation listeners
+    function addOrientationListeners() {
+      if (orientationListenersActive) return;
+      
+      window.addEventListener('deviceorientationabsolute', handleDeviceOrientation, true);
+      window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+      orientationListenersActive = true;
+      console.log('[HeadingDisplay] Orientation listeners added');
+    }
+    
+    // Request device orientation permission (iOS 13+)
+    function requestOrientationPermission() {
+      if (typeof DeviceOrientationEvent !== 'undefined' && 
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ requires permission request from user gesture
+        DeviceOrientationEvent.requestPermission()
+          .then(response => {
+            if (response === 'granted') {
+              addOrientationListeners();
+              console.log('[HeadingDisplay] ✓ iOS permission granted');
+            } else {
+              console.log('[HeadingDisplay] iOS permission denied');
+            }
+          })
+          .catch(err => {
+            console.warn('[HeadingDisplay] Permission error:', err);
+            // Try adding listeners anyway for older iOS
+            addOrientationListeners();
+          });
+      } else {
+        // Non-iOS or older devices - just add listeners directly
+        addOrientationListeners();
+      }
+    }
+    
+    // Start orientation listeners immediately for non-iOS
+    if (typeof DeviceOrientationEvent === 'undefined' || 
+        typeof DeviceOrientationEvent.requestPermission !== 'function') {
+      addOrientationListeners();
+    }
+    
+    // Update display every 100ms
+    setInterval(updateHeadingDisplay, 100);
+    
+    // Request permission on first user interaction (required for iOS)
+    document.addEventListener('click', function initOrientation() {
+      requestOrientationPermission();
+      document.removeEventListener('click', initOrientation);
+    }, { once: true });
+    
+    console.log('[HeadingDisplay] ✓ Heading display initialized (always active)');
+    
+    // ===== BUTTON HOVER EFFECTS =====
+    document.querySelectorAll('#leftControls button, #rightControls button').forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'rgba(50, 50, 50, 0.95)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        // Don't reset toggle button if active
+        if (btn.id === 'toggleBtn' && window.AccessNatureApp?.controllers?.compass?.isRotationEnabled) {
+          btn.style.background = '#4CAF50';
+        } else {
+          btn.style.background = 'rgba(26, 26, 26, 0.95)';
+        }
+      });
+      btn.addEventListener('mousedown', () => {
+        btn.style.transform = 'scale(0.95)';
+      });
+      btn.addEventListener('mouseup', () => {
+        btn.style.transform = 'scale(1)';
+      });
+    });
+    
+    // ===== TOP CONTROL BAR BUTTON EFFECTS =====
+    document.querySelectorAll('#topControlBar button').forEach(btn => {
+      btn.addEventListener('mousedown', () => {
+        btn.style.transform = 'scale(0.9)';
+        btn.style.opacity = '0.8';
+      });
+      btn.addEventListener('mouseup', () => {
+        btn.style.transform = 'scale(1)';
+        btn.style.opacity = '1';
+      });
+    });
+    
+    console.log('[TrackerUI] Controls initialized!');
+  })();
+  
+  // ===== FULLSCREEN MODE TOGGLE =====
+  let isFullscreen = false;
+  
+  function toggleFullscreenMode() {
+    isFullscreen = !isFullscreen;
+    
+    const topControlBar = document.getElementById('topControlBar');
+    const headingRow = document.getElementById('headingRow');
+    const leftControls = document.getElementById('leftControls');
+    const rightControls = document.getElementById('rightControls');
+    const bottomNav = document.getElementById('globalBottomNav');
+    const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
+    
+    // Get or create exit fullscreen button
+    let exitBtn = document.getElementById('exitFullscreenBtn');
+    
+    if (isFullscreen) {
+      // Enter fullscreen - hide all UI except map
+      topControlBar?.style.setProperty('display', 'none', 'important');
+      headingRow?.style.setProperty('display', 'none', 'important');
+      leftControls?.style.setProperty('display', 'none', 'important');
+      rightControls?.style.setProperty('display', 'none', 'important');
+      bottomNav?.classList.add('hidden');
+      
+      if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Exit Fullscreen';
+      
+      // Create exit button if doesn't exist
+      if (!exitBtn) {
+        exitBtn = document.createElement('button');
+        exitBtn.id = 'exitFullscreenBtn';
+        exitBtn.innerHTML = '⛶';
+        exitBtn.title = 'Exit Fullscreen';
+        exitBtn.setAttribute('aria-label', 'Exit fullscreen mode');
+        exitBtn.style.cssText = `
+          position: fixed;
+          top: 60px;
+          right: 10px;
+          width: 40px;
+          height: 40px;
+          background: rgba(26, 26, 26, 0.8);
+          border: 1px solid #444;
+          border-radius: 50%;
+          color: white;
+          font-size: 18px;
+          cursor: pointer;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.6;
+          transition: opacity 0.2s;
+        `;
+        exitBtn.addEventListener('mouseenter', () => exitBtn.style.opacity = '1');
+        exitBtn.addEventListener('mouseleave', () => exitBtn.style.opacity = '0.6');
+        exitBtn.addEventListener('click', toggleFullscreenMode);
+        document.body.appendChild(exitBtn);
+      }
+      exitBtn.style.display = 'flex';
+      
+      // Show a brief toast
+      window.toast?.show('Fullscreen mode');
+      
+      // Close the options panel
+      togglePanel('moreOptionsPanel');
+      
+    } else {
+      // Exit fullscreen - show all UI
+      topControlBar?.style.removeProperty('display');
+      headingRow?.style.removeProperty('display');
+      leftControls?.style.removeProperty('display');
+      rightControls?.style.removeProperty('display');
+      bottomNav?.classList.remove('hidden');
+      
+      if (fullscreenBtn) fullscreenBtn.textContent = '⛶ Toggle Fullscreen';
+      
+      // Hide exit button
+      if (exitBtn) exitBtn.style.display = 'none';
+    }
+    
+    // Dispatch event for other components
+    window.dispatchEvent(new CustomEvent('fullscreenToggle', { 
+      detail: { fullscreen: isFullscreen }
+    }));
+    
+    console.log('[TrackerUI] Fullscreen mode:', isFullscreen);
+  }
+  
+  // Make function globally available
+  window.toggleFullscreenMode = toggleFullscreenMode;
+  
+  // ===== HIGH CONTRAST TOGGLE (in left controls) =====
+  (function() {
+    const hcToggleTracker = document.getElementById('highContrastToggleTracker');
+    
+    function updateHCButtonState() {
+      const isHC = document.documentElement.classList.contains('high-contrast');
+      if (hcToggleTracker) {
+        // Update the SVG fill based on state
+        const svg = hcToggleTracker.querySelector('svg');
+        if (svg) {
+          svg.style.fill = isHC ? '#000' : '#fff';
+        }
+        hcToggleTracker.style.background = isHC ? '#fff' : 'rgba(26, 26, 26, 0.95)';
+        hcToggleTracker.style.borderColor = isHC ? '#000' : '#333';
+      }
+    }
+    
+    // Initial state
+    updateHCButtonState();
+    
+    hcToggleTracker?.addEventListener('click', function() {
+      const isNowHC = document.documentElement.classList.toggle('high-contrast');
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        prefs.highContrast = isNowHC;
+        localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+      } catch(e) {}
+      updateHCButtonState();
+      try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+    });
+  })();
+</script>
+</body>
+</html>

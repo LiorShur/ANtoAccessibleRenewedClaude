@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Access Nature</title>
+  <link rel="stylesheet" href="src/css/landing.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="src/assets/icon.svg">
+  <style>
+    .legal-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.7;
+      color: #1f2937;
+    }
+    
+    .legal-header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .legal-header h1 {
+      color: #2c5530;
+      font-size: 2.2rem;
+      margin: 0 0 10px 0;
+    }
+    
+    .legal-header .last-updated {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    
+    .legal-nav {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    
+    .legal-nav h3 {
+      margin: 0 0 12px 0;
+      font-size: 0.9rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .legal-nav ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    
+    .legal-nav a {
+      color: #2c5530;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    
+    .legal-nav a:hover {
+      text-decoration: underline;
+    }
+    
+    .legal-section {
+      margin-bottom: 35px;
+    }
+    
+    .legal-section h2 {
+      color: #2c5530;
+      font-size: 1.4rem;
+      margin: 0 0 16px 0;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .legal-section h3 {
+      color: #374151;
+      font-size: 1.1rem;
+      margin: 20px 0 10px 0;
+    }
+    
+    .legal-section p {
+      margin: 0 0 12px 0;
+      color: #4b5563;
+    }
+    
+    .legal-section ul, .legal-section ol {
+      margin: 0 0 16px 0;
+      padding-left: 24px;
+      color: #4b5563;
+    }
+    
+    .legal-section li {
+      margin-bottom: 8px;
+    }
+    
+    .highlight-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 16px 0;
+    }
+    
+    .highlight-box.warning {
+      background: #fef3c7;
+      border-color: #fcd34d;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #2c5530;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    
+    .contact-box {
+      background: #f3f4f6;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 30px;
+    }
+    
+    .contact-box h3 {
+      margin: 0 0 12px 0;
+      color: #1f2937;
+    }
+    
+    @media (max-width: 640px) {
+      .legal-container {
+        padding: 20px 16px;
+      }
+      
+      .legal-header h1 {
+        font-size: 1.8rem;
+      }
+      
+      .legal-nav ul {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  
+  <!-- Analytics & Error Monitoring -->
+  <script src="src/utils/monitoring.js" defer></script>
+</head>
+<body>
+  <div class="legal-container">
+    <a href="index.html" class="back-link">← Back to Access Nature</a>
+    
+    <header class="legal-header">
+      <h1>🔒 Privacy Policy</h1>
+      <p class="last-updated">Last Updated: December 2024</p>
+    </header>
+    
+    <nav class="legal-nav">
+      <h2>Contents</h2>
+      <ul>
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#data-collected">Data We Collect</a></li>
+        <li><a href="#how-we-use">How We Use Your Data</a></li>
+        <li><a href="#data-sharing">Data Sharing</a></li>
+        <li><a href="#data-storage">Data Storage & Security</a></li>
+        <li><a href="#your-rights">Your Rights</a></li>
+        <li><a href="#location-data">Location Data</a></li>
+        <li><a href="#cookies">Cookies & Local Storage</a></li>
+        <li><a href="#children">Children's Privacy</a></li>
+        <li><a href="#changes">Changes to This Policy</a></li>
+        <li><a href="#contact">Contact Us</a></li>
+      </ul>
+    </nav>
+    
+    <section class="legal-section" id="introduction">
+      <h2>1. Introduction</h2>
+      <p>Welcome to Access Nature ("we," "our," or "us"). We are committed to protecting your privacy and ensuring you understand how we collect, use, and safeguard your information.</p>
+      <p>Access Nature is an accessibility mapping platform that helps users find and document accessible outdoor trails. This Privacy Policy explains our data practices when you use our website and mobile application (collectively, the "Service").</p>
+      <div class="highlight-box">
+        <strong>Our Commitment:</strong> As an accessibility-focused platform, we understand the importance of privacy, especially regarding health-related information like mobility profiles. We only collect data necessary to provide our services and give you full control over your information.
+      </div>
+    </section>
+    
+    <section class="legal-section" id="data-collected">
+      <h2>2. Data We Collect</h2>
+      
+      <h3>2.1 Account Information</h3>
+      <p>When you create an account, we collect:</p>
+      <ul>
+        <li>Email address</li>
+        <li>Display name (optional)</li>
+        <li>Profile picture (optional, if using social sign-in)</li>
+      </ul>
+      
+      <h3>2.2 Trail & Route Data</h3>
+      <p>When you use our tracking features, we collect:</p>
+      <ul>
+        <li>GPS coordinates of your recorded routes</li>
+        <li>Timestamps of your trail recordings</li>
+        <li>Photos you choose to attach to routes</li>
+        <li>Notes and descriptions you add</li>
+        <li>Accessibility survey responses</li>
+      </ul>
+      
+      <h3>2.3 Mobility Profile (Optional)</h3>
+      <p>You may choose to create a mobility profile including:</p>
+      <ul>
+        <li>Mobility aid usage (wheelchair, walker, etc.)</li>
+        <li>Accessibility preferences</li>
+        <li>Physical considerations for trail recommendations</li>
+      </ul>
+      <div class="highlight-box warning">
+        <strong>Important:</strong> Your mobility profile is stored locally on your device by default. You choose whether to sync it to the cloud or share it with the community.
+      </div>
+      
+      <h3>2.4 Accessibility Reports</h3>
+      <p>When you submit accessibility barrier reports:</p>
+      <ul>
+        <li>Location of the reported barrier</li>
+        <li>Description and category of the issue</li>
+        <li>Photos of the barrier</li>
+        <li>Your user ID (for attribution)</li>
+      </ul>
+      
+      <h3>2.5 Technical Data</h3>
+      <p>We automatically collect:</p>
+      <ul>
+        <li>Device type and operating system</li>
+        <li>Browser type and version</li>
+        <li>General location (country/region, not precise)</li>
+        <li>App usage patterns (anonymized)</li>
+      </ul>
+    </section>
+    
+    <section class="legal-section" id="how-we-use">
+      <h2>3. How We Use Your Data</h2>
+      <p>We use your information to:</p>
+      <ul>
+        <li><strong>Provide the Service:</strong> Track routes, generate trail guides, and display accessibility information</li>
+        <li><strong>Personalize Your Experience:</strong> Recommend trails based on your mobility profile and preferences</li>
+        <li><strong>Build Community Resources:</strong> When you share trails publicly, they help other users find accessible routes</li>
+        <li><strong>Improve Accessibility:</strong> Aggregate and anonymized data helps us understand accessibility needs</li>
+        <li><strong>Communicate With You:</strong> Send service updates, respond to inquiries, and (with your consent) notify you of new features</li>
+        <li><strong>Ensure Security:</strong> Detect and prevent fraud, abuse, or security issues</li>
+      </ul>
+    </section>
+    
+    <section class="legal-section" id="data-sharing">
+      <h2>4. Data Sharing</h2>
+      
+      <h3>4.1 Public Sharing (Your Choice)</h3>
+      <p>When you choose to make a trail guide "public," the following becomes visible to other users:</p>
+      <ul>
+        <li>Trail route and map</li>
+        <li>Accessibility survey information</li>
+        <li>Photos attached to the trail</li>
+        <li>Your display name (not email)</li>
+      </ul>
+      <p>Private trails are only visible to you.</p>
+      
+      <h3>4.2 Third-Party Services</h3>
+      <p>We use the following third-party services:</p>
+      <ul>
+        <li><strong>Firebase (Google):</strong> Authentication, database, and file storage</li>
+        <li><strong>OpenStreetMap/Leaflet:</strong> Map display (no personal data shared)</li>
+        <li><strong>EmailJS:</strong> For feedback and contact forms (only if you submit a form)</li>
+      </ul>
+      
+      <h3>4.3 We Do NOT</h3>
+      <ul>
+        <li>Sell your personal data to third parties</li>
+        <li>Share your mobility profile without explicit consent</li>
+        <li>Use your data for targeted advertising</li>
+        <li>Share your precise location with other users (only trail data you choose to publish)</li>
+      </ul>
+    </section>
+    
+    <section class="legal-section" id="data-storage">
+      <h2>5. Data Storage & Security</h2>
+      <p>Your data is stored using:</p>
+      <ul>
+        <li><strong>Firebase Cloud Firestore:</strong> Secure, encrypted database hosted by Google</li>
+        <li><strong>Firebase Cloud Storage:</strong> For photos and trail guide files</li>
+        <li><strong>Local Device Storage:</strong> For offline access and draft data</li>
+      </ul>
+      <p>We implement industry-standard security measures including:</p>
+      <ul>
+        <li>Encryption in transit (HTTPS/TLS)</li>
+        <li>Encryption at rest for stored data</li>
+        <li>Secure authentication via Firebase Auth</li>
+        <li>Regular security reviews</li>
+      </ul>
+    </section>
+    
+    <section class="legal-section" id="your-rights">
+      <h2>6. Your Rights</h2>
+      <p>You have the right to:</p>
+      <ul>
+        <li><strong>Access:</strong> View all data we have about you</li>
+        <li><strong>Correct:</strong> Update inaccurate information</li>
+        <li><strong>Delete:</strong> Request deletion of your account and data</li>
+        <li><strong>Export:</strong> Download your data in a portable format</li>
+        <li><strong>Withdraw Consent:</strong> Stop sharing public trails at any time</li>
+        <li><strong>Opt-Out:</strong> Disable optional data collection features</li>
+      </ul>
+      <p>To exercise these rights, visit your Profile Settings or contact us at the address below.</p>
+    </section>
+    
+    <section class="legal-section" id="location-data">
+      <h2>7. Location Data</h2>
+      <p>Location data is central to Access Nature's functionality. Here's how we handle it:</p>
+      <ul>
+        <li><strong>Permission Required:</strong> We only access your location when you explicitly grant permission</li>
+        <li><strong>Active Tracking Only:</strong> GPS is only used when you're actively recording a trail</li>
+        <li><strong>No Background Tracking:</strong> We do not track your location in the background</li>
+        <li><strong>You Control Sharing:</strong> Location data in trails is only shared if you publish the trail publicly</li>
+      </ul>
+    </section>
+    
+    <section class="legal-section" id="cookies">
+      <h2>8. Cookies & Local Storage</h2>
+      <p>We use browser storage technologies for:</p>
+      <ul>
+        <li><strong>Authentication:</strong> Keeping you signed in</li>
+        <li><strong>Preferences:</strong> Remembering your display settings</li>
+        <li><strong>Offline Access:</strong> Storing draft trails when you're offline</li>
+        <li><strong>Performance:</strong> Caching data to improve load times</li>
+      </ul>
+      <p>We do not use tracking cookies or third-party advertising cookies.</p>
+    </section>
+    
+    <section class="legal-section" id="children">
+      <h2>9. Children's Privacy</h2>
+      <p>Access Nature is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.</p>
+    </section>
+    
+    <section class="legal-section" id="changes">
+      <h2>10. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by:</p>
+      <ul>
+        <li>Posting a notice in the app</li>
+        <li>Updating the "Last Updated" date above</li>
+        <li>Sending an email for material changes (if you've provided one)</li>
+      </ul>
+      <p>Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
+    </section>
+    
+    <section class="legal-section" id="contact">
+      <h2>11. Contact Us</h2>
+      <div class="contact-box">
+        <h3>Questions About Privacy?</h3>
+        <p>If you have questions about this Privacy Policy or our data practices, please contact us:</p>
+        <p>
+          <strong>Email:</strong> accessnatureadmn@gmail.com<br>
+          <strong>Website:</strong> <a href="index.html">accessnature.app</a>
+        </p>
+        <p style="margin-top: 16px; color: #6b7280; font-size: 0.9rem;">
+          For data deletion requests, please include "Data Deletion Request" in your subject line and the email address associated with your account.
+        </p>
+      </div>
+    </section>
+    
+    <footer style="margin-top: 50px; padding-top: 30px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280;">
+      <p>© 2024 Access Nature. All rights reserved.</p>
+      <p style="margin-top: 10px;">
+        <a href="index.html" style="color: #2c5530;">Home</a> · 
+        <a href="terms.html" style="color: #2c5530;">Terms of Service</a> · 
+        <a href="index.html#contact" style="color: #2c5530;">Contact</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

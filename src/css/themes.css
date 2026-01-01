@@ -1,0 +1,125 @@
+/* Dark mode and responsive styles */
+
+/* Dark Mode */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark-mode .top-bar,
+body.dark-mode .bottom-nav,
+body.dark-mode .bottom-popup {
+  background: rgba(30, 30, 30, 0.95);
+  color: #e0e0e0;
+}
+
+body.dark-mode .round-button {
+  background: rgba(50, 50, 50, 0.9);
+  color: #e0e0e0;
+}
+
+body.dark-mode button {
+  background-color: #333;
+  color: white;
+}
+
+body.dark-mode .nav-button {
+  background: #444;
+  color: #e0e0e0;
+}
+
+body.dark-mode .nav-button:hover:not(:disabled) {
+  background: #555;
+}
+
+body.dark-mode .stat-display {
+  color: #e0e0e0;
+}
+
+body.dark-mode .modal-container {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .top-bar {
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    transform: none;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+  
+  .bottom-nav {
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    transform: none;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+  
+  .bottom-popup {
+    bottom: 50px;
+    left: 5px;
+    right: 5px;
+    padding: 10px;
+  }
+  
+  .floating-left {
+    left: 5px;
+  }
+  
+  .floating-right {
+    right: 5px;
+  }
+  
+  /* #compass positioning now handled inline in tracker.html */
+  
+  .round-button {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+  
+  .stat-display {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-bar {
+    gap: 2px;
+    padding: 4px 6px;
+  }
+  
+  .round-button {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+  
+  button {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .stat-display {
+    font-size: 12px;
+  }
+}
+
+/* Touch optimization */
+@media (hover: none) and (pointer: coarse) {
+  .round-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  button {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+}

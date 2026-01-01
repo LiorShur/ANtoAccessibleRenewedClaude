@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - Accessible</title>
+  <link rel="stylesheet" href="src/css/landing.css">
+  <link rel="stylesheet" href="src/css/unified-nav.css">
+  <link rel="stylesheet" href="src/css/mobile-responsive.css">
+  <link rel="stylesheet" href="src/css/error-messages.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/global-nav.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="src/assets/icon.svg">
+  <link rel="apple-touch-icon" href="src/assets/icon-192.png">
+  <meta name="theme-color" content="#2c5530">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+    })();
+  </script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    /* WCAG Accessibility Styles */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Focus styles */
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid #2c5530;
+      outline-offset: 2px;
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: #2c5530;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100000;
+      text-decoration: none;
+      font-weight: 500;
+      transform: translateY(-100%);
+      transition: transform 0.2s ease;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+    
+    /* Critical: Top navigation hamburger menu (must be inline for mobile) */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #2c5530;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 9999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .nav-brand {
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    
+    .nav-auth-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    
+    /* Desktop: show nav-menu, hide hamburger */
+    @media (min-width: 769px) {
+      .menu-toggle { display: none !important; }
+      .nav-menu {
+        display: flex !important;
+        position: static;
+        background: none;
+        box-shadow: none;
+        padding: 0;
+        gap: 8px;
+      }
+      .nav-menu .nav-link {
+        padding: 8px 12px;
+        border-radius: 6px;
+      }
+      .nav-menu .nav-auth {
+        margin-left: 8px;
+      }
+    }
+    
+    /* Mobile: hide hamburger (replaced by bottom nav) */
+    @media (max-width: 768px) {
+      .menu-toggle { display: none !important; }
+      .nav-menu { display: none !important; }
+    }
+    
+    .hamburger-icon {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 24px;
+    }
+    
+    .hamburger-icon span {
+      display: block;
+      height: 3px;
+      background: white;
+      border-radius: 2px;
+      transition: transform 0.3s ease;
+    }
+    
+    .menu-toggle.active .hamburger-icon span:nth-child(1) {
+      transform: translateY(8px) rotate(45deg);
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(2) {
+      opacity: 0;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(3) {
+      transform: translateY(-8px) rotate(-45deg);
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      padding-top: 56px; /* Account for fixed top-nav */
+      background: #f8fafc;
+      color: #1f2937;
+      min-height: 100vh;
+    }
+    
+    /* Header */
+    .profile-header {
+      background: linear-gradient(135deg, #2c5530 0%, #4a7c59 100%);
+      color: white;
+      padding: 0;
+      position: relative; /* Changed from sticky - no need with top-nav */
+    }
+    
+    /* Profile Card */
+    .profile-card {
+      padding: 24px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      border: 3px solid rgba(255,255,255,0.3);
+      overflow: hidden;
+    }
+    
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .profile-info {
+      flex: 1;
+    }
+    
+    .profile-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+    
+    .profile-email {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      margin: 0 0 8px 0;
+    }
+    
+    .profile-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    
+    /* Main Content */
+    .profile-content {
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .stat-icon {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #2c5530;
+      line-height: 1;
+      margin-bottom: 4px;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Loading spinner for stats */
+    .stat-loading {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #2c5530;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Sections */
+    .profile-section {
+      background: white;
+      border-radius: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0;
+    }
+    
+    .section-title .icon {
+      font-size: 1.2rem;
+    }
+    
+    .section-action {
+      color: #2c5530;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    
+    .section-action:hover {
+      background: #f0fdf4;
+    }
+    
+    .section-content {
+      padding: 16px 20px;
+    }
+    
+    /* Settings Items */
+    .settings-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+    
+    .settings-item:hover {
+      background: #f9fafb;
+    }
+    
+    .settings-item-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    
+    .settings-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
+    .settings-item-icon.green { background: #dcfce7; }
+    .settings-item-icon.blue { background: #dbeafe; }
+    .settings-item-icon.purple { background: #ede9fe; }
+    .settings-item-icon.orange { background: #ffedd5; }
+    .settings-item-icon.red { background: #fee2e2; }
+    
+    .settings-item-text h4 {
+      margin: 0 0 2px 0;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    
+    .settings-item-text p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    
+    .settings-item-right {
+      color: #9ca3af;
+      font-size: 1.2rem;
+    }
+    
+    /* Mobility Profile Preview */
+    .mobility-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .mobility-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f0fdf4;
+      color: #166534;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    
+    .mobility-empty {
+      color: #6b7280;
+      font-size: 0.9rem;
+      padding: 8px 0;
+    }
+    
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #2c5530;
+      box-shadow: 0 0 0 3px rgba(44, 85, 48, 0.1);
+    }
+    
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #2c5530, #4a7c59);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(44, 85, 48, 0.3);
+    }
+    
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+    
+    .btn-danger {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    .btn-danger:hover {
+      background: #fecaca;
+    }
+    
+    .btn-block {
+      width: 100%;
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s;
+    }
+    
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+    
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+    
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: #f3f4f6;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+    }
+    
+    .toast {
+      background: #1f2937;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideUp 0.3s ease;
+    }
+    
+    .toast.success { background: #166534; }
+    .toast.error { background: #dc2626; }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Loading State */
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #2c5530;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    
+    .loading-overlay p {
+      margin-top: 16px;
+      color: #6b7280;
+    }
+    
+    /* Sign In Prompt */
+    .signin-prompt {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    
+    .signin-prompt .icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+    
+    .signin-prompt h2 {
+      margin: 0 0 12px 0;
+      color: #1f2937;
+    }
+    
+    .signin-prompt p {
+      color: #6b7280;
+      margin: 0 0 24px 0;
+    }
+    
+    /* Footer */
+    .profile-footer {
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+    
+    .footer-links a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    
+    .footer-links a:hover {
+      color: #2c5530;
+    }
+    
+    .app-version {
+      color: #9ca3af;
+      font-size: 0.8rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      
+      .stat-card {
+        padding: 16px 10px;
+      }
+      
+      .stat-value {
+        font-size: 1.4rem;
+      }
+      
+      .stat-label {
+        font-size: 0.65rem;
+      }
+      
+      .profile-avatar {
+        width: 64px;
+        height: 64px;
+        font-size: 2rem;
+      }
+      
+      .profile-name {
+        font-size: 1.2rem;
+      }
+    }
+    
+    /* High contrast toggle - circular button style */
+    .high-contrast-toggle {
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0));
+      left: 20px;
+      z-index: 9999;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: rgba(26, 26, 26, 0.95);
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .high-contrast-toggle .toggle-text {
+      display: none;
+    }
+    
+    .high-contrast-toggle .toggle-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Add bottom padding for bottom nav */
+    body.has-bottom-nav {
+      padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0));
+    }
+  </style>
+  
+  <!-- Analytics & Error Monitoring -->
+  <script src="src/utils/monitoring.js" defer></script>
+</head>
+<body>
+  <!-- Skip to main content link for keyboard users -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Navigation -->
+  <nav class="top-nav" role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-brand">♿ Accessible</a>
+    <div class="nav-auth-indicator">
+      <div class="auth-status" id="navAuthIndicator">
+        <span aria-hidden="true">👤</span>
+        <span id="navAuthStatusText">Guest</span>
+      </div>
+    </div>
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
+      <span class="hamburger-icon" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+    </button>
+    <div class="nav-menu" id="navMenu" role="menu">
+      <a href="index.html" class="nav-link" role="menuitem">🏠 Home</a>
+      <a href="tracker.html" class="nav-link" role="menuitem">🗺️ Track</a>
+      <a href="reports.html" class="nav-link" role="menuitem">📋 Reports</a>
+      <a href="profile.html" class="nav-link active" role="menuitem">👤 Profile</a>
+      <div class="nav-auth">
+        <button id="navAuthBtn" class="btn" aria-label="Sign in to your account">Sign In</button>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- High Contrast Toggle -->
+  <button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode" title="Toggle high contrast mode" aria-pressed="false">
+    <span class="toggle-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z"/>
+      </svg>
+    </span>
+    <span class="toggle-text">High Contrast</span>
+  </button>
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" role="alert" aria-live="polite">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p>Loading profile...</p>
+  </div>
+
+  <!-- Main Content (hidden until loaded) -->
+  <div id="mainContent" style="display: none;">
+    <!-- Header -->
+    <header class="profile-header" role="banner">
+      <div class="profile-card">
+        <div class="profile-avatar" id="profileAvatar" aria-hidden="true">👤</div>
+        <div class="profile-info">
+          <h1 class="profile-name" id="profileName">Loading...</h1>
+          <p class="profile-email" id="profileEmail">...</p>
+          <span class="profile-badge" id="profileBadge">
+            <span aria-hidden="true">🌱</span> <span id="badgeText">Explorer</span>
+          </span>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Content -->
+    <main id="main-content" class="profile-content" role="main">
+      <!-- Stats -->
+      <section class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon">📚</div>
+          <div class="stat-value" id="statGuides"><span class="stat-loading"></span></div>
+          <div class="stat-label">Trail Guides</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📏</div>
+          <div class="stat-value" id="statDistance"><span class="stat-loading"></span></div>
+          <div class="stat-label">km Tracked</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value" id="statReports"><span class="stat-loading"></span></div>
+          <div class="stat-label">Reports</div>
+        </div>
+      </section>
+      
+      <!-- Account Section -->
+      <section class="profile-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="icon">👤</span> Account
+          </h2>
+        </div>
+        <ul class="settings-list">
+          <li class="settings-item" onclick="openEditNameModal()">
+            <div class="settings-item-left">
+              <div class="settings-item-icon green">✏️</div>
+              <div class="settings-item-text">
+                <h3>Display Name</h3>
+                <p id="currentDisplayName">Not set</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+          <li class="settings-item" onclick="openChangeEmailModal()">
+            <div class="settings-item-left">
+              <div class="settings-item-icon blue">📧</div>
+              <div class="settings-item-text">
+                <h3>Email Address</h3>
+                <p id="currentEmail">Loading...</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+        </ul>
+      </section>
+      
+      <!-- Mobility Profile Section -->
+      <section class="profile-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="icon">♿</span> Mobility Profile
+          </h2>
+          <a href="#" class="section-action" onclick="openMobilityModal(); return false;">Edit</a>
+        </div>
+        <div class="section-content">
+          <div class="mobility-preview" id="mobilityPreview">
+            <span class="mobility-empty">No mobility preferences set. Tap Edit to personalize your experience.</span>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Data & Privacy Section -->
+      <section class="profile-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="icon">🔒</span> Data & Privacy
+          </h2>
+        </div>
+        <ul class="settings-list">
+          <li class="settings-item" onclick="exportUserData()">
+            <div class="settings-item-left">
+              <div class="settings-item-icon purple">📥</div>
+              <div class="settings-item-text">
+                <h3>Export My Data</h3>
+                <p>Download all your data</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+          <li class="settings-item" onclick="window.location.href='privacy.html'">
+            <div class="settings-item-left">
+              <div class="settings-item-icon blue">📋</div>
+              <div class="settings-item-text">
+                <h3>Privacy Policy</h3>
+                <p>How we handle your data</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+          <li class="settings-item" onclick="window.location.href='terms.html'">
+            <div class="settings-item-left">
+              <div class="settings-item-icon orange">📜</div>
+              <div class="settings-item-text">
+                <h3>Terms of Service</h3>
+                <p>Usage terms and conditions</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+        </ul>
+      </section>
+      
+      <!-- Danger Zone -->
+      <section class="profile-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="icon">⚠️</span> Account Actions
+          </h2>
+        </div>
+        <ul class="settings-list">
+          <li class="settings-item" onclick="signOutUser()">
+            <div class="settings-item-left">
+              <div class="settings-item-icon orange">🚪</div>
+              <div class="settings-item-text">
+                <h3>Sign Out</h3>
+                <p>Sign out of your account</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+          <li class="settings-item" onclick="openDeleteAccountModal()">
+            <div class="settings-item-left">
+              <div class="settings-item-icon red">🗑️</div>
+              <div class="settings-item-text">
+                <h3>Delete Account</h3>
+                <p>Permanently delete your account and data</p>
+              </div>
+            </div>
+            <div class="settings-item-right">›</div>
+          </li>
+        </ul>
+      </section>
+      
+      <!-- Footer -->
+      <footer class="profile-footer">
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="beta-guide.html">Help</a>
+          <a href="reports.html">Reports</a>
+        </div>
+        <p class="app-version">Accessible v1.0.0-beta</p>
+      </footer>
+    </main>
+  </div>
+  
+  <!-- Sign In Prompt (shown when not logged in) -->
+  <div id="signinPrompt" class="signin-prompt" style="display: none;">
+    <div class="icon">🔐</div>
+    <h2>Sign In Required</h2>
+    <p>Please sign in to view your profile and settings.</p>
+    <button class="btn btn-primary" onclick="window.location.href='index.html'">
+      Go to Home Page
+    </button>
+  </div>
+  
+  <!-- Edit Name Modal -->
+  <div id="editNameModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Display Name</h3>
+        <button class="modal-close" onclick="closeModal('editNameModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input type="text" id="newDisplayName" class="form-input" placeholder="Enter your name" maxlength="50">
+        </div>
+        <p style="font-size: 0.85rem; color: #6b7280; margin: 0;">
+          This name will be shown on your public trail guides.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editNameModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDisplayName()">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Mobility Profile Modal -->
+  <div id="mobilityModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Mobility Profile</h3>
+        <button class="modal-close" onclick="closeModal('mobilityModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: #6b7280; margin: 0 0 20px 0;">
+          Help us recommend trails that match your needs. This information is stored locally and never shared without your consent.
+        </p>
+        
+        <div class="form-group">
+          <label class="form-label">Primary Mobility Aid</label>
+          <select id="mobilityAid" class="form-input">
+            <option value="">None / Walking</option>
+            <option value="manual_wheelchair">Manual Wheelchair</option>
+            <option value="power_wheelchair">Power Wheelchair</option>
+            <option value="mobility_scooter">Mobility Scooter</option>
+            <option value="walker">Walker / Rollator</option>
+            <option value="cane">Cane / Walking Stick</option>
+            <option value="crutches">Crutches</option>
+            <option value="prosthetic">Prosthetic Limb</option>
+            <option value="service_animal">Service Animal</option>
+            <option value="stroller">Stroller / Pushchair</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Maximum Trail Gradient</label>
+          <select id="maxGradient" class="form-input">
+            <option value="">No preference</option>
+            <option value="flat">Flat only (< 2%)</option>
+            <option value="gentle">Gentle slopes (< 5%)</option>
+            <option value="moderate">Moderate slopes (< 8%)</option>
+            <option value="any">Any gradient</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Preferred Surface Types</label>
+          <div style="display: grid; gap: 8px; margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="surfacePaved" style="width: 18px; height: 18px;">
+              <span>Paved / Concrete</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="surfaceBoardwalk" style="width: 18px; height: 18px;">
+              <span>Boardwalk / Decking</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="surfaceGravel" style="width: 18px; height: 18px;">
+              <span>Compact Gravel</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="surfaceDirt" style="width: 18px; height: 18px;">
+              <span>Dirt / Natural</span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Additional Needs</label>
+          <div style="display: grid; gap: 8px; margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="needRestAreas" style="width: 18px; height: 18px;">
+              <span>Frequent rest areas / benches</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="needAccessibleToilets" style="width: 18px; height: 18px;">
+              <span>Accessible toilets nearby</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="needParking" style="width: 18px; height: 18px;">
+              <span>Accessible parking</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="needShade" style="width: 18px; height: 18px;">
+              <span>Shaded paths preferred</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('mobilityModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMobilityProfile()">Save Profile</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Delete Account Modal -->
+  <div id="deleteAccountModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">⚠️ Delete Account</h3>
+        <button class="modal-close" onclick="closeModal('deleteAccountModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: #dc2626; font-weight: 500; margin: 0 0 16px 0;">
+          This action cannot be undone!
+        </p>
+        <p style="font-size: 0.9rem; color: #4b5563; margin: 0 0 16px 0;">
+          Deleting your account will permanently remove:
+        </p>
+        <ul style="font-size: 0.9rem; color: #4b5563; margin: 0 0 20px 0; padding-left: 20px;">
+          <li>Your profile and settings</li>
+          <li>All your private trail guides</li>
+          <li>Your accessibility reports</li>
+          <li>Your mobility profile</li>
+        </ul>
+        <p style="font-size: 0.85rem; color: #6b7280; margin: 0 0 16px 0;">
+          Public trail guides you've shared may be retained (anonymized) to help the community.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Type "DELETE" to confirm</label>
+          <input type="text" id="deleteConfirmation" class="form-input" placeholder="DELETE">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('deleteAccountModal')">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDeleteAccount()">Delete My Account</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Firebase -->
+  <script type="module">
+    // Import from shared Firebase setup
+    import { auth, db } from './firebase-setup.js';
+    import { onAuthStateChanged, signOut, updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    import { collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    
+    let currentUser = null;
+    let userStats = { guides: 0, distance: 0, reports: 0 };
+    let mobilityProfile = {};
+    
+    console.log('👤 Profile page: Firebase auth imported from shared setup');
+    console.log('👤 Profile page: Current auth state:', auth.currentUser?.email || 'none');
+    
+    // Initialize
+    onAuthStateChanged(auth, async (user) => {
+      console.log('👤 Profile page: Auth state changed:', user ? user.email : 'signed out');
+      document.getElementById('loadingOverlay').style.display = 'none';
+      
+      if (user) {
+        currentUser = user;
+        console.log('👤 Profile page: Showing main content for:', user.email);
+        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('signinPrompt').style.display = 'none';
+        await loadUserProfile();
+      } else {
+        console.log('👤 Profile page: No user, showing sign-in prompt');
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('signinPrompt').style.display = 'block';
+      }
+    });
+    
+    // Load user profile and stats
+    async function loadUserProfile() {
+      try {
+        // Set basic info
+        document.getElementById('profileName').textContent = currentUser.displayName || 'Trail Explorer';
+        document.getElementById('profileEmail').textContent = currentUser.email;
+        document.getElementById('currentDisplayName').textContent = currentUser.displayName || 'Not set';
+        document.getElementById('currentEmail').textContent = currentUser.email;
+        
+        // Set avatar
+        const avatarEl = document.getElementById('profileAvatar');
+        if (currentUser.photoURL) {
+          avatarEl.innerHTML = `<img src="${currentUser.photoURL}" alt="Profile">`;
+        } else {
+          avatarEl.textContent = (currentUser.displayName || currentUser.email || '?')[0].toUpperCase();
+        }
+        
+        // Load stats
+        await loadUserStats();
+        
+        // Load mobility profile
+        loadMobilityProfile();
+        
+        // Update badge based on guides count
+        updateUserBadge();
+        
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        showToast('Failed to load profile data', 'error');
+      }
+    }
+    
+    // Load user stats from Firestore
+    async function loadUserStats() {
+      try {
+        // Count trail guides
+        const guidesQuery = query(
+          collection(db, 'trail_guides'),
+          where('userId', '==', currentUser.uid)
+        );
+        const guidesSnapshot = await getDocs(guidesQuery);
+        userStats.guides = guidesSnapshot.size;
+        
+        // Calculate total distance from guides
+        let totalDistance = 0;
+        guidesSnapshot.forEach(doc => {
+          const data = doc.data();
+          // Try to extract distance from htmlContent
+          if (data.htmlContent) {
+            const match = data.htmlContent.match(/<span class="tg-stat-value">(\d+\.?\d*)<\/span>\s*[\r\n\s]*<span class="tg-stat-label">km<\/span>/i);
+            if (match && match[1]) {
+              totalDistance += parseFloat(match[1]);
+            }
+          } else {
+            totalDistance += data.stats?.totalDistance || data.metadata?.totalDistance || 0;
+          }
+        });
+        userStats.distance = totalDistance;
+        
+        // Count reports
+        const reportsQuery = query(
+          collection(db, 'accessibilityReports'),
+          where('userId', '==', currentUser.uid)
+        );
+        const reportsSnapshot = await getDocs(reportsQuery);
+        userStats.reports = reportsSnapshot.size;
+        
+        // Update UI
+        document.getElementById('statGuides').textContent = userStats.guides;
+        document.getElementById('statDistance').textContent = userStats.distance.toFixed(1);
+        document.getElementById('statReports').textContent = userStats.reports;
+        
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+    
+    // Load mobility profile from localStorage
+    function loadMobilityProfile() {
+      try {
+        const stored = localStorage.getItem('accessnature_mobility_profile');
+        if (stored) {
+          mobilityProfile = JSON.parse(stored);
+          updateMobilityPreview();
+          populateMobilityForm();
+        }
+      } catch (error) {
+        console.error('Error loading mobility profile:', error);
+      }
+    }
+    
+    // Update mobility preview display
+    function updateMobilityPreview() {
+      const preview = document.getElementById('mobilityPreview');
+      const tags = [];
+      
+      if (mobilityProfile.mobilityAid) {
+        const aidLabels = {
+          'manual_wheelchair': '🦽 Manual Wheelchair',
+          'power_wheelchair': '🦼 Power Wheelchair',
+          'mobility_scooter': '🛵 Mobility Scooter',
+          'walker': '🚶 Walker',
+          'cane': '🦯 Cane',
+          'crutches': '🩼 Crutches',
+          'prosthetic': '🦿 Prosthetic',
+          'service_animal': '🐕‍🦺 Service Animal',
+          'stroller': '👶 Stroller',
+          'other': '♿ Other Aid'
+        };
+        tags.push(aidLabels[mobilityProfile.mobilityAid] || mobilityProfile.mobilityAid);
+      }
+      
+      if (mobilityProfile.maxGradient) {
+        const gradientLabels = {
+          'flat': '📐 Flat Only',
+          'gentle': '📐 Gentle Slopes',
+          'moderate': '📐 Moderate Slopes'
+        };
+        if (gradientLabels[mobilityProfile.maxGradient]) {
+          tags.push(gradientLabels[mobilityProfile.maxGradient]);
+        }
+      }
+      
+      if (mobilityProfile.needRestAreas) tags.push('🪑 Rest Areas');
+      if (mobilityProfile.needAccessibleToilets) tags.push('🚻 Accessible WC');
+      if (mobilityProfile.needParking) tags.push('🅿️ Accessible Parking');
+      if (mobilityProfile.needShade) tags.push('🌳 Shaded Paths');
+      
+      if (tags.length > 0) {
+        preview.innerHTML = tags.map(tag => `<span class="mobility-tag">${tag}</span>`).join('');
+      } else {
+        preview.innerHTML = '<span class="mobility-empty">No mobility preferences set. Tap Edit to personalize your experience.</span>';
+      }
+    }
+    
+    // Populate mobility form with saved values
+    function populateMobilityForm() {
+      if (mobilityProfile.mobilityAid) {
+        document.getElementById('mobilityAid').value = mobilityProfile.mobilityAid;
+      }
+      if (mobilityProfile.maxGradient) {
+        document.getElementById('maxGradient').value = mobilityProfile.maxGradient;
+      }
+      
+      // Surfaces
+      document.getElementById('surfacePaved').checked = mobilityProfile.surfacePaved || false;
+      document.getElementById('surfaceBoardwalk').checked = mobilityProfile.surfaceBoardwalk || false;
+      document.getElementById('surfaceGravel').checked = mobilityProfile.surfaceGravel || false;
+      document.getElementById('surfaceDirt').checked = mobilityProfile.surfaceDirt || false;
+      
+      // Needs
+      document.getElementById('needRestAreas').checked = mobilityProfile.needRestAreas || false;
+      document.getElementById('needAccessibleToilets').checked = mobilityProfile.needAccessibleToilets || false;
+      document.getElementById('needParking').checked = mobilityProfile.needParking || false;
+      document.getElementById('needShade').checked = mobilityProfile.needShade || false;
+    }
+    
+    // Update user badge based on activity
+    function updateUserBadge() {
+      const badgeEl = document.getElementById('profileBadge');
+      const badgeText = document.getElementById('badgeText');
+      
+      let badge = { emoji: '🌱', text: 'Explorer' };
+      
+      if (userStats.guides >= 20 || userStats.distance >= 100) {
+        badge = { emoji: '🏆', text: 'Trail Master' };
+      } else if (userStats.guides >= 10 || userStats.distance >= 50) {
+        badge = { emoji: '⭐', text: 'Pathfinder' };
+      } else if (userStats.guides >= 5 || userStats.distance >= 20) {
+        badge = { emoji: '🥾', text: 'Trail Guide' };
+      } else if (userStats.guides >= 1) {
+        badge = { emoji: '🌿', text: 'Contributor' };
+      }
+      
+      badgeEl.querySelector('span:first-child').textContent = badge.emoji;
+      badgeText.textContent = badge.text;
+    }
+    
+    // Modal functions
+    window.openEditNameModal = function() {
+      document.getElementById('newDisplayName').value = currentUser.displayName || '';
+      document.getElementById('editNameModal').classList.add('active');
+    };
+    
+    window.openMobilityModal = function() {
+      document.getElementById('mobilityModal').classList.add('active');
+    };
+    
+    window.openChangeEmailModal = function() {
+      showToast('Email change coming soon', 'info');
+    };
+    
+    window.openDeleteAccountModal = function() {
+      document.getElementById('deleteConfirmation').value = '';
+      document.getElementById('deleteAccountModal').classList.add('active');
+    };
+    
+    window.closeModal = function(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    };
+    
+    // Save display name
+    window.saveDisplayName = async function() {
+      const newName = document.getElementById('newDisplayName').value.trim();
+      
+      if (!newName) {
+        showToast('Please enter a name', 'error');
+        return;
+      }
+      
+      try {
+        await updateProfile(currentUser, { displayName: newName });
+        
+        // Update UI
+        document.getElementById('profileName').textContent = newName;
+        document.getElementById('currentDisplayName').textContent = newName;
+        
+        closeModal('editNameModal');
+        showToast('Display name updated!', 'success');
+        
+      } catch (error) {
+        console.error('Error updating name:', error);
+        showToast('Failed to update name', 'error');
+      }
+    };
+    
+    // Save mobility profile
+    window.saveMobilityProfile = function() {
+      mobilityProfile = {
+        mobilityAid: document.getElementById('mobilityAid').value,
+        maxGradient: document.getElementById('maxGradient').value,
+        surfacePaved: document.getElementById('surfacePaved').checked,
+        surfaceBoardwalk: document.getElementById('surfaceBoardwalk').checked,
+        surfaceGravel: document.getElementById('surfaceGravel').checked,
+        surfaceDirt: document.getElementById('surfaceDirt').checked,
+        needRestAreas: document.getElementById('needRestAreas').checked,
+        needAccessibleToilets: document.getElementById('needAccessibleToilets').checked,
+        needParking: document.getElementById('needParking').checked,
+        needShade: document.getElementById('needShade').checked,
+        updatedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('accessnature_mobility_profile', JSON.stringify(mobilityProfile));
+      
+      updateMobilityPreview();
+      closeModal('mobilityModal');
+      showToast('Mobility profile saved!', 'success');
+    };
+    
+    // Sign out
+    window.signOutUser = async function() {
+      if (confirm('Are you sure you want to sign out?')) {
+        try {
+          await signOut(auth);
+          window.location.href = 'index.html';
+        } catch (error) {
+          console.error('Error signing out:', error);
+          showToast('Failed to sign out', 'error');
+        }
+      }
+    };
+    
+    // Export user data
+    window.exportUserData = async function() {
+      try {
+        showToast('Preparing your data...', 'info');
+        
+        const exportData = {
+          profile: {
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            createdAt: currentUser.metadata.creationTime
+          },
+          mobilityProfile: mobilityProfile,
+          stats: userStats,
+          exportedAt: new Date().toISOString()
+        };
+        
+        // Get trail guides
+        const guidesQuery = query(
+          collection(db, 'trail_guides'),
+          where('userId', '==', currentUser.uid)
+        );
+        const guidesSnapshot = await getDocs(guidesQuery);
+        exportData.trailGuides = [];
+        guidesSnapshot.forEach(doc => {
+          const data = doc.data();
+          exportData.trailGuides.push({
+            id: doc.id,
+            routeName: data.routeName,
+            generatedAt: data.generatedAt?.toDate?.().toISOString() || null,
+            isPublic: data.isPublic
+          });
+        });
+        
+        // Get reports
+        const reportsQuery = query(
+          collection(db, 'accessibilityReports'),
+          where('userId', '==', currentUser.uid)
+        );
+        const reportsSnapshot = await getDocs(reportsQuery);
+        exportData.reports = [];
+        reportsSnapshot.forEach(doc => {
+          const data = doc.data();
+          exportData.reports.push({
+            id: doc.id,
+            title: data.title,
+            issueType: data.issueType,
+            createdAt: data.createdAt?.toDate?.().toISOString() || null
+          });
+        });
+        
+        // Download as JSON
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `access-nature-data-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('Data exported successfully!', 'success');
+        
+      } catch (error) {
+        console.error('Error exporting data:', error);
+        showToast('Failed to export data', 'error');
+      }
+    };
+    
+    // Delete account
+    window.confirmDeleteAccount = async function() {
+      const confirmation = document.getElementById('deleteConfirmation').value;
+      
+      if (confirmation !== 'DELETE') {
+        showToast('Please type DELETE to confirm', 'error');
+        return;
+      }
+      
+      try {
+        showToast('Deleting account...', 'info');
+        
+        // Delete user data from Firestore
+        const batch = writeBatch(db);
+        
+        // Delete trail guides
+        const guidesQuery = query(
+          collection(db, 'trail_guides'),
+          where('userId', '==', currentUser.uid)
+        );
+        const guidesSnapshot = await getDocs(guidesQuery);
+        guidesSnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        
+        // Delete reports
+        const reportsQuery = query(
+          collection(db, 'accessibilityReports'),
+          where('userId', '==', currentUser.uid)
+        );
+        const reportsSnapshot = await getDocs(reportsQuery);
+        reportsSnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        
+        // Delete the user account
+        await deleteUser(currentUser);
+        
+        // Clear local storage
+        localStorage.removeItem('accessnature_mobility_profile');
+        
+        showToast('Account deleted successfully', 'success');
+        
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        
+        if (error.code === 'auth/requires-recent-login') {
+          showToast('Please sign out and sign in again before deleting your account', 'error');
+        } else {
+          showToast('Failed to delete account: ' + error.message, 'error');
+        }
+      }
+    };
+    
+    // Toast notification
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = message;
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+    
+    // Make showToast available globally
+    window.showToast = showToast;
+    
+    // Close modal on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+          modal.classList.remove('active');
+        });
+      }
+    });
+    
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+    
+    // Setup hamburger menu
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const navMenu = document.getElementById('navMenu');
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+        menuToggle?.setAttribute('aria-expanded', 'false');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+        menuToggle?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+      
+      // Close menu when clicking links or buttons
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      // Close menu when clicking outside
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+    })();
+    
+    // Update nav auth status based on Firebase auth state
+    import('https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js').then(({ getAuth, onAuthStateChanged, signOut }) => {
+      import('./firebase-setup.js').then(({ auth }) => {
+        const indicator = document.getElementById('navAuthIndicator');
+        const text = document.getElementById('navAuthStatusText');
+        const btn = document.getElementById('navAuthBtn');
+        
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            indicator?.classList.add('signed-in');
+            if (text) text.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+            if (btn) { 
+              btn.textContent = 'Sign Out'; 
+              btn.onclick = () => signOut(auth).then(() => window.location.href = 'index.html');
+            }
+          } else {
+            indicator?.classList.remove('signed-in');
+            if (text) text.textContent = 'Guest';
+            if (btn) { 
+              btn.textContent = 'Sign In'; 
+              btn.onclick = () => window.location.href = 'index.html';
+            }
+          }
+        });
+      });
+    });
+  </script>
+  
+  <!-- Global Bottom Navigation -->
+  <script type="module">
+    import { initGlobalNav } from './src/components/globalNav.js';
+    
+    // Initialize bottom nav
+    initGlobalNav({ currentPage: 'profile' });
+  </script>
+  
+  <!-- High Contrast Toggle Handler -->
+  <script>
+    (function() {
+      var hcToggle = document.getElementById('highContrastToggle');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcToggle) {
+          var svg = hcToggle.querySelector('svg');
+          if (svg) {
+            svg.style.fill = isHC ? '#000' : '#fff';
+          }
+          hcToggle.style.background = isHC ? '#fff' : 'rgba(26, 26, 26, 0.95)';
+          hcToggle.style.borderColor = isHC ? '#000' : '#333';
+        }
+      }
+      
+      updateHCButton();
+      
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+      });
+    })();
+  </script>
+  
+  <!-- Beta Feedback Button -->
+  <script type="module">
+    import { betaFeedback } from './src/utils/betaFeedback.js';
+    betaFeedback.initialize();
+  </script>
+</body>
+</html>

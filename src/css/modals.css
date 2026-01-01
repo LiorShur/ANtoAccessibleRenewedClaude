@@ -1,0 +1,653 @@
+/* ==============================================
+   ACCESS NATURE - MODAL STYLES (FIXED)
+   Unified modal system using design tokens
+   
+   FIXES APPLIED:
+   - Uses z-index CSS variables from design-system.css
+   - Removed hardcoded z-index values
+   - Consolidated duplicate modal styles from ui-polish.css and auth.css
+   - Removed !important declarations where possible
+   
+   File: src/css/modals.css
+   Version: 2.0
+   ============================================== */
+
+/* ==============================================
+   MODAL BACKDROP
+   ============================================== */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-overlay);
+  z-index: var(--z-modal-backdrop);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+
+.modal-backdrop.active,
+.modal-backdrop.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ==============================================
+   MODAL CONTAINER
+   ============================================== */
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: calc(100% - var(--space-lg));
+  max-width: var(--modal-max-width);
+  max-height: 90vh;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-modal);
+  opacity: 0;
+  visibility: hidden;
+  transition: 
+    opacity var(--transition-base), 
+    visibility var(--transition-base),
+    transform var(--transition-base);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal.active,
+.modal.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* ==============================================
+   MODAL HEADER
+   ============================================== */
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 24px;
+  line-height: 1;
+  transition: 
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.modal-close:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.modal-close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ==============================================
+   MODAL BODY
+   ============================================== */
+
+.modal-body {
+  padding: var(--space-lg);
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-body p {
+  margin: 0 0 var(--space-md);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* ==============================================
+   MODAL FOOTER
+   ============================================== */
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.modal-footer .btn {
+  min-width: 100px;
+}
+
+/* ==============================================
+   MODAL TYPES - Icons and Colors
+   ============================================== */
+
+/* Success Modal */
+.modal--success .modal-header {
+  border-bottom-color: var(--color-success);
+}
+
+.modal--success .modal-icon {
+  color: var(--color-success);
+}
+
+/* Error Modal */
+.modal--error .modal-header {
+  border-bottom-color: var(--color-danger);
+}
+
+.modal--error .modal-icon {
+  color: var(--color-danger);
+}
+
+/* Warning Modal */
+.modal--warning .modal-header {
+  border-bottom-color: var(--color-warning);
+}
+
+.modal--warning .modal-icon {
+  color: var(--color-warning);
+}
+
+/* Info Modal */
+.modal--info .modal-header {
+  border-bottom-color: var(--color-info);
+}
+
+.modal--info .modal-icon {
+  color: var(--color-info);
+}
+
+/* Confirm Modal */
+.modal--confirm .modal-footer {
+  justify-content: space-between;
+}
+
+/* ==============================================
+   MODAL ICON
+   ============================================== */
+
+.modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: 24px;
+}
+
+.modal-icon--success {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: var(--color-success);
+}
+
+.modal-icon--error {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: var(--color-danger);
+}
+
+.modal-icon--warning {
+  background-color: rgba(255, 165, 0, 0.1);
+  color: var(--color-warning);
+}
+
+.modal-icon--info {
+  background-color: rgba(33, 150, 243, 0.1);
+  color: var(--color-info);
+}
+
+/* ==============================================
+   MODAL FORM ELEMENTS
+   ============================================== */
+
+.modal-input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--input-border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.modal-input::placeholder {
+  color: var(--color-text-hint);
+}
+
+.modal-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ==============================================
+   MODAL LIST (for route selection, etc.)
+   ============================================== */
+
+.modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.modal-list-item {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.modal-list-item:last-child {
+  border-bottom: none;
+}
+
+.modal-list-item:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.modal-list-item:focus {
+  outline: none;
+  background-color: var(--color-surface-hover);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.modal-list-item-title {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.modal-list-item-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ==============================================
+   LOADING MODAL
+   ============================================== */
+
+.modal--loading .modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+.modal-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--space-md);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modal-loading-text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* ==============================================
+   FULLSCREEN MODAL (for trail guides, etc.)
+   ============================================== */
+
+.modal--fullscreen {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  transform: translate(-50%, -50%);
+}
+
+.modal--fullscreen.active,
+.modal--fullscreen.show {
+  transform: translate(-50%, -50%);
+}
+
+/* ==============================================
+   TRAIL BROWSER MODAL (consolidated from ui-polish.css)
+   ============================================== */
+
+.trail-browser-modal {
+  max-width: 800px;
+}
+
+.trail-browser-modal .modal-body {
+  padding: 0;
+}
+
+.trail-browser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.trail-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: 
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.trail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.trail-card-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background-color: var(--color-background);
+}
+
+.trail-card-content {
+  padding: var(--space-md);
+}
+
+.trail-card-title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.trail-card-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  gap: var(--space-md);
+}
+
+/* ==============================================
+   AUTH MODAL (consolidated from auth.css)
+   ============================================== */
+
+.auth-modal {
+  max-width: 400px;
+}
+
+.auth-modal .modal-body {
+  padding: var(--space-xl);
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-lg);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: var(--space-md);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: 
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.auth-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.auth-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.auth-input-group label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+  color: var(--color-text-hint);
+  font-size: var(--font-size-sm);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-border);
+}
+
+.auth-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: 
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.auth-social-btn:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-dark);
+}
+
+.auth-social-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-footer {
+  margin-top: var(--space-lg);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.auth-footer a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ==============================================
+   MOBILE RESPONSIVE - Bottom Sheet Style
+   ============================================== */
+
+@media (max-width: 640px) {
+  .modal {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: translateY(100%);
+    width: 100%;
+    max-width: none;
+    max-height: 90vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .modal.active,
+  .modal.show {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    padding: var(--space-md);
+  }
+
+  .modal-body {
+    padding: var(--space-md);
+  }
+
+  .modal-footer {
+    padding: var(--space-md);
+    flex-direction: column;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  /* Auth modal on mobile */
+  .auth-modal .modal-body {
+    padding: var(--space-lg);
+  }
+
+  /* Trail browser on mobile */
+  .trail-browser-grid {
+    grid-template-columns: 1fr;
+    padding: var(--space-md);
+  }
+}
+
+/* ==============================================
+   DARK MODE ADJUSTMENTS
+   ============================================== */
+
+[data-theme="dark"] .modal,
+body.dark-mode .modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+[data-theme="dark"] .modal-backdrop,
+body.dark-mode .modal-backdrop {
+  background-color: var(--color-overlay-dark);
+}
+
+[data-theme="dark"] .modal-input,
+body.dark-mode .modal-input {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+/* ==============================================
+   ACCESSIBILITY
+   ============================================== */
+
+/* Focus trap visual indicator */
+.modal:focus {
+  outline: none;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .modal {
+    border: 2px solid var(--color-text-primary);
+  }
+
+  .modal-close {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .modal-backdrop {
+    transition: none;
+  }
+}
+
+/* QUICK FIX: Force modal content visible when parent backdrop exists */
+.modal-backdrop .modal {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  margin: auto;
+}

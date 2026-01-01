@@ -1,0 +1,688 @@
+/* ==============================================
+   ACCESSIBLE - TRACKER THEME
+   Gaia GPS-inspired design: Black backgrounds, 
+   white text/icons, green active states
+   
+   EASILY CUSTOMIZABLE: Change the --tracker-* variables
+   to completely reskin the tracker interface.
+   
+   File: src/css/tracker-theme.css
+   Version: 1.0
+   ============================================== */
+
+:root {
+  /* ==============================================
+     TRACKER THEME VARIABLES
+     Change these to reskin the entire tracker UI
+     ============================================== */
+  
+  /* Background colors */
+  --tracker-bg-primary: #1a1a1a;          /* Main dark background */
+  --tracker-bg-secondary: #2a2a2a;        /* Slightly lighter */
+  --tracker-bg-tertiary: #333333;         /* Panel backgrounds */
+  --tracker-bg-translucent: rgba(0, 0, 0, 0.85);
+  
+  /* Text colors */
+  --tracker-text-primary: #ffffff;        /* Main text */
+  --tracker-text-secondary: #cccccc;      /* Secondary text */
+  --tracker-text-muted: #888888;          /* Muted/hint text */
+  
+  /* Accent colors */
+  --tracker-accent: #4CAF50;              /* Green - active state */
+  --tracker-accent-hover: #66BB6A;        /* Green hover */
+  --tracker-accent-light: rgba(76, 175, 80, 0.2);
+  
+  /* Status colors */
+  --tracker-danger: #f44336;              /* Red - SOS, stop */
+  --tracker-warning: #FFA500;             /* Orange - caution */
+  --tracker-info: #2196F3;                /* Blue - info */
+  
+  /* Compass colors */
+  --tracker-compass-north: #f44336;       /* Red north pointer */
+  --tracker-compass-south: #ffffff;       /* White south pointer */
+  --tracker-compass-bg: #1a1a1a;
+  --tracker-compass-ring: #333333;
+  
+  /* Heading indicator */
+  --tracker-heading-bg: #1a1a1a;
+  --tracker-heading-line: #ffffff;
+  --tracker-heading-marker: #4CAF50;      /* Green center marker */
+  --tracker-heading-text: #ffffff;
+  
+  /* Control button sizing */
+  --tracker-btn-size: 48px;
+  --tracker-btn-size-lg: 56px;
+  --tracker-btn-size-sm: 40px;
+  --tracker-btn-radius: 12px;
+  --tracker-btn-radius-round: 50%;
+  
+  /* Spacing */
+  --tracker-gap: 8px;
+  --tracker-padding: 12px;
+}
+
+/* ==============================================
+   TRACKER CONTROL BUTTONS - Base Style
+   ============================================== */
+
+.tracker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tracker-btn-size);
+  height: var(--tracker-btn-size);
+  background: var(--tracker-bg-primary);
+  color: var(--tracker-text-primary);
+  border: 1px solid var(--tracker-bg-tertiary);
+  border-radius: var(--tracker-btn-radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tracker-btn:hover {
+  background: var(--tracker-bg-secondary);
+  transform: scale(1.05);
+}
+
+.tracker-btn:active {
+  transform: scale(0.95);
+  background: var(--tracker-bg-tertiary);
+}
+
+.tracker-btn.active {
+  background: var(--tracker-accent);
+  color: var(--tracker-text-primary);
+  border-color: var(--tracker-accent);
+}
+
+.tracker-btn.round {
+  border-radius: var(--tracker-btn-radius-round);
+}
+
+.tracker-btn.large {
+  width: var(--tracker-btn-size-lg);
+  height: var(--tracker-btn-size-lg);
+  font-size: 24px;
+}
+
+.tracker-btn.small {
+  width: var(--tracker-btn-size-sm);
+  height: var(--tracker-btn-size-sm);
+  font-size: 16px;
+}
+
+/* Icon-only buttons */
+.tracker-btn .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SVG icons */
+.tracker-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.tracker-btn.small svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ==============================================
+   TRACKER BUTTON GROUPS
+   ============================================== */
+
+.tracker-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tracker-gap);
+  background: var(--tracker-bg-translucent);
+  padding: var(--tracker-gap);
+  border-radius: calc(var(--tracker-btn-radius) + var(--tracker-gap));
+  backdrop-filter: blur(10px);
+}
+
+.tracker-btn-group.horizontal {
+  flex-direction: row;
+}
+
+/* ==============================================
+   START/STOP RECORDING BUTTON
+   ============================================== */
+
+.tracker-record-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+  height: 56px;
+  background: var(--tracker-accent);
+  color: var(--tracker-text-primary);
+  border: none;
+  border-radius: 28px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.tracker-record-btn:hover {
+  background: var(--tracker-accent-hover);
+  transform: scale(1.02);
+}
+
+.tracker-record-btn:active {
+  transform: scale(0.98);
+}
+
+.tracker-record-btn.recording {
+  background: var(--tracker-danger);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+  animation: pulse-recording 2s infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% { box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4); }
+  50% { box-shadow: 0 4px 20px rgba(244, 67, 54, 0.6); }
+}
+
+.tracker-record-btn .record-icon {
+  width: 16px;
+  height: 16px;
+  background: var(--tracker-text-primary);
+  border-radius: 50%;
+}
+
+.tracker-record-btn.recording .record-icon {
+  width: 16px;
+  height: 16px;
+  background: var(--tracker-text-primary);
+  border-radius: 3px;
+}
+
+/* ==============================================
+   COMPASS - Gaia Style
+   ============================================== */
+
+.tracker-compass {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  background: var(--tracker-compass-bg);
+  border: 2px solid var(--tracker-compass-ring);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tracker-compass-needle {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  transition: transform 0.1s ease-out;
+}
+
+/* North pointer (red triangle) */
+.tracker-compass-needle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 14px solid var(--tracker-compass-north);
+}
+
+/* South pointer (white triangle) */
+.tracker-compass-needle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 14px solid var(--tracker-compass-south);
+}
+
+/* Center dot */
+.tracker-compass-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: var(--tracker-text-muted);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* N indicator */
+.tracker-compass-n {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--tracker-compass-north);
+}
+
+/* ==============================================
+   HEADING INDICATOR - Sliding Scale (Gaia Style)
+   ============================================== */
+
+.tracker-heading {
+  position: relative;
+  width: 200px;
+  height: 48px;
+  background: var(--tracker-heading-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Center marker (green line) */
+.tracker-heading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: var(--tracker-heading-marker);
+  z-index: 10;
+}
+
+/* Sliding scale container */
+.tracker-heading-scale {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  transition: transform 0.1s ease-out;
+  /* Will be translated based on current heading */
+}
+
+/* Individual tick marks */
+.tracker-heading-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.tracker-heading-tick .line {
+  width: 1px;
+  height: 12px;
+  background: var(--tracker-heading-line);
+}
+
+.tracker-heading-tick.major .line {
+  height: 20px;
+  width: 2px;
+}
+
+.tracker-heading-tick .label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tracker-heading-text);
+  margin-top: 2px;
+}
+
+/* Cardinal direction labels */
+.tracker-heading-tick.cardinal .label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tracker-accent);
+}
+
+/* Current heading display */
+.tracker-heading-value {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tracker-accent);
+  background: var(--tracker-heading-bg);
+  padding: 0 8px;
+  z-index: 11;
+}
+
+/* ==============================================
+   ZOOM CONTROLS
+   ============================================== */
+
+.tracker-zoom-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--tracker-bg-primary);
+  border-radius: var(--tracker-btn-radius);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tracker-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tracker-btn-size);
+  height: var(--tracker-btn-size);
+  background: var(--tracker-bg-primary);
+  color: var(--tracker-text-primary);
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  font-weight: 300;
+  transition: background 0.2s ease;
+}
+
+.tracker-zoom-btn:first-child {
+  border-bottom: 1px solid var(--tracker-bg-tertiary);
+}
+
+.tracker-zoom-btn:hover {
+  background: var(--tracker-bg-secondary);
+}
+
+.tracker-zoom-btn:active {
+  background: var(--tracker-bg-tertiary);
+}
+
+/* ==============================================
+   STATS DISPLAY (Time/Distance)
+   ============================================== */
+
+.tracker-stats {
+  display: flex;
+  gap: 16px;
+  background: var(--tracker-bg-translucent);
+  padding: 8px 16px;
+  border-radius: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.tracker-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 70px;
+}
+
+.tracker-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tracker-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-stat-label {
+  font-size: 10px;
+  color: var(--tracker-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==============================================
+   BOTTOM CONTROL BAR
+   ============================================== */
+
+.tracker-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(to top, var(--tracker-bg-primary) 0%, var(--tracker-bg-translucent) 100%);
+  z-index: var(--z-sticky-nav);
+}
+
+.tracker-bottom-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+  justify-content: center;
+}
+
+/* ==============================================
+   FULLSCREEN MODE
+   ============================================== */
+
+body.tracker-fullscreen .top-nav,
+body.tracker-fullscreen .top-bar,
+body.tracker-fullscreen .tracker-heading,
+body.tracker-fullscreen .weather-container,
+body.tracker-fullscreen .beta-feedback-button {
+  display: none !important;
+}
+
+body.tracker-fullscreen .tracker-bottom-bar {
+  background: transparent;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+}
+
+body.tracker-fullscreen .tracker-stats {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+body.tracker-fullscreen .tracker-left-controls {
+  top: 80px;
+}
+
+/* ==============================================
+   LEFT SIDE CONTROLS
+   ============================================== */
+
+.tracker-left-controls {
+  position: fixed;
+  top: calc(var(--nav-height) + 100px);
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: var(--z-floating-buttons);
+}
+
+/* ==============================================
+   RIGHT SIDE CONTROLS
+   ============================================== */
+
+.tracker-right-controls {
+  position: fixed;
+  top: calc(var(--nav-height) + 100px);
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: var(--z-floating-buttons);
+}
+
+/* ==============================================
+   TOP INFO BAR (Heading + Compass)
+   ============================================== */
+
+.tracker-top-info {
+  position: fixed;
+  top: calc(var(--nav-height) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: var(--z-floating-buttons);
+}
+
+/* ==============================================
+   SOS BUTTON (Always visible in fullscreen)
+   ============================================== */
+
+.tracker-sos-btn {
+  position: fixed;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0));
+  right: 12px;
+  width: 56px;
+  height: 56px;
+  background: var(--tracker-danger);
+  color: var(--tracker-text-primary);
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+  z-index: var(--z-floating-buttons);
+  transition: all 0.2s ease;
+}
+
+.tracker-sos-btn:hover {
+  transform: scale(1.05);
+}
+
+.tracker-sos-btn:active {
+  transform: scale(0.95);
+}
+
+/* ==============================================
+   ACCESSIBILITY SURVEY BUTTON (Prominent)
+   ============================================== */
+
+.tracker-survey-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--tracker-bg-primary);
+  color: var(--tracker-text-primary);
+  border: 2px solid var(--tracker-accent);
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tracker-survey-btn:hover {
+  background: var(--tracker-accent-light);
+}
+
+.tracker-survey-btn .icon {
+  font-size: 18px;
+}
+
+/* ==============================================
+   SEARCH FAB (Quick access on Contribute pages)
+   ============================================== */
+
+.tracker-fab-search {
+  position: fixed;
+  bottom: calc(180px + env(safe-area-inset-bottom, 0));
+  right: 12px;
+  width: 48px;
+  height: 48px;
+  background: var(--tracker-info);
+  color: var(--tracker-text-primary);
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+  z-index: var(--z-floating-buttons);
+  transition: all 0.2s ease;
+}
+
+.tracker-fab-search:hover {
+  transform: scale(1.05);
+}
+
+/* ==============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================== */
+
+@media (max-width: 480px) {
+  .tracker-heading {
+    width: 160px;
+  }
+  
+  .tracker-stats {
+    padding: 6px 12px;
+    gap: 12px;
+  }
+  
+  .tracker-stat-value {
+    font-size: 16px;
+  }
+  
+  .tracker-record-btn {
+    max-width: 240px;
+    height: 52px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .tracker-heading {
+    width: 140px;
+  }
+  
+  .tracker-top-info {
+    gap: 8px;
+  }
+  
+  .tracker-compass {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* ==============================================
+   HIGH CONTRAST OVERRIDES
+   ============================================== */
+
+.high-contrast .tracker-btn,
+.high-contrast .tracker-compass,
+.high-contrast .tracker-heading,
+.high-contrast .tracker-stats {
+  border: 2px solid var(--tracker-text-primary);
+}
+
+.high-contrast .tracker-text-primary {
+  color: #ffffff;
+}
+
+.high-contrast .tracker-accent {
+  --tracker-accent: #00ff00;
+}

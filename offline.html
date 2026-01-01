@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Access Nature</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .offline-container {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .offline-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+    
+    p {
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    
+    .features-available {
+      background: #f0fdf4;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    
+    .features-available h3 {
+      font-size: 0.9rem;
+      color: #166534;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .features-available ul {
+      list-style: none;
+      font-size: 0.9rem;
+      color: #374151;
+    }
+    
+    .features-available li {
+      padding: 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .features-available li::before {
+      content: '✓';
+      color: #22c55e;
+      font-weight: bold;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 14px 28px;
+      background: #2c5530;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #1e3a21;
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      margin-left: 12px;
+    }
+    
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.online {
+      background: #22c55e;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .cached-pages {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .cached-pages h4 {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    
+    .cached-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    
+    .cached-links a {
+      padding: 8px 16px;
+      background: #f3f4f6;
+      color: #374151;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    
+    .cached-links a:hover {
+      background: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>It looks like you've lost your internet connection. Don't worry - many features still work offline!</p>
+    
+    <div class="features-available">
+      <h3>✅ Available Offline</h3>
+      <ul>
+        <li>GPS tracking & route recording</li>
+        <li>Taking photos & notes</li>
+        <li>Viewing saved routes</li>
+        <li>Accessibility surveys</li>
+        <li>Downloaded trail maps</li>
+      </ul>
+    </div>
+    
+    <button class="btn" onclick="tryReconnect()">
+      Try Again
+    </button>
+    <a href="/tracker.html" class="btn btn-secondary">
+      Go to Tracker
+    </a>
+    
+    <div class="status-indicator">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Checking connection...</span>
+    </div>
+    
+    <div class="cached-pages">
+      <h4>Cached Pages</h4>
+      <div class="cached-links">
+        <a href="/index.html">🏠 Home</a>
+        <a href="/tracker.html">🗺️ Tracker</a>
+        <a href="/reports.html">📋 Reports</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Check connection status
+    function updateStatus() {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      
+      if (navigator.onLine) {
+        dot.classList.add('online');
+        text.textContent = 'Connection restored!';
+        
+        // Redirect to home after a moment
+        setTimeout(() => {
+          window.location.href = '/index.html';
+        }, 1500);
+      } else {
+        dot.classList.remove('online');
+        text.textContent = 'No internet connection';
+      }
+    }
+    
+    function tryReconnect() {
+      const text = document.getElementById('statusText');
+      text.textContent = 'Checking connection...';
+      
+      fetch('/index.html', { method: 'HEAD', cache: 'no-store' })
+        .then(() => {
+          window.location.reload();
+        })
+        .catch(() => {
+          text.textContent = 'Still offline';
+        });
+    }
+    
+    // Listen for online/offline events
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    
+    // Initial check
+    updateStatus();
+  </script>
+</body>
+</html>

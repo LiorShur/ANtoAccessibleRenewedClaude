@@ -1,0 +1,579 @@
+/* ==============================================
+   ACCESS NATURE - NAVIGATION FEATURES (FIXED)
+   Compass, recording indicator, recenter button
+   
+   FIXES APPLIED:
+   - Uses z-index CSS variables from design-system.css
+   - Removed all hardcoded z-index values
+   - Removed unnecessary !important declarations
+   
+   File: src/css/navigation-features.css
+   Version: 2.0
+   ============================================== */
+
+/* ==============================================
+   COMPASS
+   ============================================== */
+
+.compass-container {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--space-md));
+  right: var(--space-md);
+  z-index: var(--z-compass);
+}
+
+/* #compass positioning now handled inline in tracker.html */
+
+.compass {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: 
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.compass:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-lg);
+}
+
+.compass:active {
+  transform: scale(0.95);
+}
+
+.compass-needle {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  transition: transform 0.3s ease-out;
+}
+
+.compass-needle::before,
+.compass-needle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+}
+
+/* North pointer (red) */
+.compass-needle::before {
+  top: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 20px solid var(--color-danger);
+}
+
+/* South pointer (white) */
+.compass-needle::after {
+  bottom: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 20px solid var(--color-text-secondary);
+}
+
+/* Compass center dot */
+.compass-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-primary);
+  z-index: 1;
+}
+
+/* Compass N indicator */
+.compass-label {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-danger);
+}
+
+/* ==============================================
+   RECORDING INDICATOR
+   ============================================== */
+
+.recording-indicator {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--space-md));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-recording-indicator);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transition: 
+    opacity var(--transition-base),
+    visibility var(--transition-base);
+}
+
+.recording-indicator.active,
+.recording-indicator.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.recording-indicator.hidden {
+  display: none;
+}
+
+.recording-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+}
+
+.recording-text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.recording-time {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==============================================
+   RECENTER BUTTON
+   ============================================== */
+
+.recenter-btn,
+#recenterBtn {
+  position: fixed;
+  bottom: calc(80px + var(--space-md));
+  right: var(--space-md);
+  z-index: var(--z-recenter-btn);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: none;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.recenter-btn:hover,
+#recenterBtn:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+  background-color: var(--color-surface-hover);
+}
+
+.recenter-btn:active,
+#recenterBtn:active {
+  transform: scale(0.95);
+}
+
+.recenter-btn:focus,
+#recenterBtn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus), var(--shadow-md);
+}
+
+.recenter-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--color-primary);
+}
+
+/* Crosshair icon using CSS */
+.recenter-btn::before,
+.recenter-btn::after {
+  content: '';
+  position: absolute;
+  background: var(--color-primary);
+}
+
+.recenter-btn::before {
+  width: 2px;
+  height: 20px;
+}
+
+.recenter-btn::after {
+  width: 20px;
+  height: 2px;
+}
+
+/* Center dot */
+.recenter-btn .center-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-primary);
+  background: transparent;
+  position: absolute;
+}
+
+/* ==============================================
+   DIRECTION ARROW (on map marker)
+   ============================================== */
+
+.direction-arrow,
+#direction-arrow {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  transition: transform 0.2s ease-out;
+}
+
+.direction-arrow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 24px solid var(--color-primary);
+}
+
+/* User location marker */
+.user-marker {
+  width: 20px;
+  height: 20px;
+  background: var(--color-primary);
+  border: 3px solid white;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+}
+
+.user-marker-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  opacity: 0.3;
+  animation: pulse-location 2s ease-out infinite;
+}
+
+@keyframes pulse-location {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* ==============================================
+   GPS ACCURACY INDICATOR
+   ============================================== */
+
+.gps-accuracy {
+  position: fixed;
+  top: calc(var(--nav-height) + var(--space-md));
+  left: var(--space-md);
+  z-index: var(--z-status-bar);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.gps-accuracy-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.gps-accuracy-dot.excellent {
+  background: var(--color-success);
+}
+
+.gps-accuracy-dot.good {
+  background: #8BC34A;
+}
+
+.gps-accuracy-dot.fair {
+  background: var(--color-warning);
+}
+
+.gps-accuracy-dot.poor {
+  background: var(--color-danger);
+}
+
+.gps-accuracy-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==============================================
+   SPEED DISPLAY
+   ============================================== */
+
+.speed-display {
+  position: fixed;
+  bottom: calc(80px + var(--space-md));
+  left: var(--space-md);
+  z-index: var(--z-floating-buttons);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-sm);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  min-width: 64px;
+}
+
+.speed-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.speed-unit {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ==============================================
+   ALTITUDE DISPLAY
+   ============================================== */
+
+.altitude-display {
+  position: fixed;
+  bottom: calc(80px + 80px + var(--space-md));
+  left: var(--space-md);
+  z-index: var(--z-floating-buttons);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-sm);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  min-width: 64px;
+}
+
+.altitude-value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.altitude-unit {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* ==============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================== */
+
+@media (max-width: 640px) {
+  .compass-container {
+    top: calc(var(--nav-height) + var(--space-sm));
+    right: var(--space-sm);
+  }
+
+  .compass {
+    width: 36px;
+    height: 36px;
+  }
+
+  .compass-needle {
+    width: 32px;
+    height: 32px;
+  }
+
+  .compass-needle::before {
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 16px solid var(--color-danger);
+  }
+
+  .compass-needle::after {
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 16px solid var(--color-text-secondary);
+  }
+
+  .recording-indicator {
+    top: calc(var(--nav-height) + var(--space-sm));
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-xs);
+  }
+
+  .recenter-btn,
+  #recenterBtn {
+    width: 44px;
+    height: 44px;
+    bottom: calc(70px + var(--space-sm));
+    right: var(--space-sm);
+  }
+
+  .speed-display,
+  .altitude-display {
+    left: var(--space-sm);
+    padding: var(--space-xs);
+    min-width: 56px;
+  }
+
+  .speed-value,
+  .altitude-value {
+    font-size: var(--font-size-lg);
+  }
+
+  .gps-accuracy {
+    left: var(--space-sm);
+    top: calc(var(--nav-height) + var(--space-sm));
+  }
+}
+
+/* Landscape adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  .compass-container {
+    top: calc(48px + var(--space-sm));
+  }
+
+  .compass {
+    width: 44px;
+    height: 44px;
+  }
+
+  .recording-indicator {
+    top: calc(48px + var(--space-sm));
+  }
+
+  .recenter-btn,
+  #recenterBtn {
+    bottom: calc(60px + var(--space-sm));
+  }
+
+  .speed-display {
+    bottom: calc(60px + var(--space-sm));
+  }
+
+  .altitude-display {
+    bottom: calc(60px + 60px + var(--space-sm));
+  }
+}
+
+/* ==============================================
+   DARK MODE
+   ============================================== */
+
+[data-theme="dark"] .compass,
+body.dark-mode .compass {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .recording-indicator,
+body.dark-mode .recording-indicator {
+  background: var(--color-surface);
+}
+
+[data-theme="dark"] .recenter-btn,
+[data-theme="dark"] #recenterBtn,
+body.dark-mode .recenter-btn,
+body.dark-mode #recenterBtn {
+  background: var(--color-surface);
+}
+
+[data-theme="dark"] .speed-display,
+[data-theme="dark"] .altitude-display,
+[data-theme="dark"] .gps-accuracy,
+body.dark-mode .speed-display,
+body.dark-mode .altitude-display,
+body.dark-mode .gps-accuracy {
+  background: var(--color-surface);
+}
+
+/* ==============================================
+   ACCESSIBILITY
+   ============================================== */
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .compass,
+  .recording-indicator,
+  .recenter-btn,
+  #recenterBtn,
+  .speed-display,
+  .altitude-display,
+  .gps-accuracy {
+    border: 2px solid var(--color-text-primary);
+  }
+
+  .recording-dot {
+    border: 2px solid white;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .recording-dot,
+  .user-marker-pulse {
+    animation: none;
+  }
+
+  .compass-needle {
+    transition: none;
+  }
+}

@@ -1,0 +1,379 @@
+/**
+ * UI Utilities CSS
+ * Access Nature - Skeleton Loaders, Animations, Font Sizes
+ */
+
+/* ========== Skeleton Loaders ========== */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-text {
+  height: 1em;
+  margin-bottom: 0.5em;
+  border-radius: 4px;
+}
+
+.skeleton-text.short {
+  width: 40%;
+}
+
+.skeleton-text.medium {
+  width: 70%;
+}
+
+.skeleton-text.long {
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 1.5em;
+  width: 60%;
+  margin-bottom: 1em;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.skeleton-button {
+  height: 44px;
+  width: 120px;
+  border-radius: 8px;
+}
+
+.skeleton-card {
+  height: 200px;
+  border-radius: 12px;
+}
+
+.skeleton-image {
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+}
+
+.skeleton-stat {
+  width: 60px;
+  height: 32px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Skeleton container for multiple items */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ========== Loading Spinner ========== */
+.spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner.small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.spinner.large {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== Font Size Preferences ========== */
+[data-font-size="normal"] {
+  font-size: 16px;
+}
+
+[data-font-size="large"] {
+  font-size: 18px;
+}
+
+[data-font-size="large"] .nav-link,
+[data-font-size="large"] .btn,
+[data-font-size="large"] button {
+  font-size: 1.1em;
+}
+
+[data-font-size="extra-large"] {
+  font-size: 20px;
+}
+
+[data-font-size="extra-large"] .nav-link,
+[data-font-size="extra-large"] .btn,
+[data-font-size="extra-large"] button {
+  font-size: 1.2em;
+}
+
+[data-font-size="extra-large"] input,
+[data-font-size="extra-large"] textarea,
+[data-font-size="extra-large"] select {
+  font-size: 1.1em;
+  padding: 14px 16px;
+}
+
+/* ========== Reduced Motion ========== */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+.reduced-motion .skeleton {
+  animation: none;
+  background: #e0e0e0;
+}
+
+.reduced-motion .spinner {
+  animation: none;
+  border-color: #667eea;
+  border-top-color: transparent;
+}
+
+/* ========== Touch Targets ========== */
+/* Ensure minimum 48x48dp touch targets for accessibility */
+.touch-target {
+  min-width: 48px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button,
+.btn,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+a.nav-link {
+  min-height: 44px;
+}
+
+/* ========== Loading Overlay ========== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  gap: 16px;
+}
+
+.loading-overlay.hidden {
+  display: none;
+}
+
+.loading-overlay .loading-text {
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ========== Progress Bar ========== */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-bar.indeterminate .progress-bar-fill {
+  width: 30%;
+  animation: indeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* ========== Pulse Animation ========== */
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ========== Fade Animations ========== */
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ========== Slide Animations ========== */
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+.slide-down {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== Scale Animation (for buttons) ========== */
+.scale-on-press:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* ========== Empty State ========== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.empty-state-description {
+  font-size: 0.95rem;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* ========== Error State ========== */
+.error-state {
+  text-align: center;
+  padding: 40px 20px;
+  background: #fef2f2;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+}
+
+.error-state-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.error-state-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #991b1b;
+  margin-bottom: 8px;
+}
+
+.error-state-description {
+  font-size: 0.9rem;
+  color: #7f1d1d;
+  margin-bottom: 16px;
+}
+
+.error-state-action {
+  padding: 10px 20px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error-state-action:hover {
+  background: #b91c1c;
+}
+
+/* ========== High Contrast Overrides ========== */
+.high-contrast .skeleton {
+  background: #ccc;
+  animation: none;
+}
+
+.high-contrast .spinner {
+  border-color: #000;
+  border-top-color: transparent;
+}
+
+.high-contrast .progress-bar {
+  background: #ccc;
+  border: 2px solid #000;
+}
+
+.high-contrast .progress-bar-fill {
+  background: #000;
+}

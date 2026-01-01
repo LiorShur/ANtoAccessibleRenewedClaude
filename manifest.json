@@ -1,0 +1,49 @@
+{
+  "name": "Accessible",
+  "short_name": "Accessible",
+  "description": "Making paths clear for everyone. Track trails, report barriers, and discover accessible routes.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["navigation", "health", "lifestyle", "accessibility"],
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Record Trail",
+      "short_name": "Track",
+      "description": "Start recording an accessible trail",
+      "url": "/tracker.html?action=start"
+    },
+    {
+      "name": "Report Issue",
+      "short_name": "Report",
+      "description": "Report an accessibility barrier",
+      "url": "/reports.html?action=create"
+    },
+    {
+      "name": "Find Trails",
+      "short_name": "Search",
+      "description": "Search for accessible trails",
+      "url": "/index.html?action=search-trails"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

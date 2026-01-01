@@ -1,0 +1,420 @@
+/* ==============================================
+   ACCESS NATURE - DESIGN SYSTEM (FIXED)
+   Complete design tokens and variables
+   
+   FIXES APPLIED:
+   - Standardized z-index scale (single source of truth)
+   - All z-index values now use CSS variables
+   - No more competing z-index values across files
+   
+   File: src/css/design-system.css
+   Version: 2.0
+   ============================================== */
+
+:root {
+  /* ==============================================
+     Z-INDEX SCALE - SINGLE SOURCE OF TRUTH
+     
+     IMPORTANT: All components MUST use these variables.
+     Do NOT use hardcoded z-index values anywhere else.
+     
+     Scale designed with large gaps to allow insertion
+     of new layers without renumbering.
+     ============================================== */
+  
+  /* Base layer - Default stacking context */
+  --z-base: 0;
+  
+  /* Map layers (1-99) */
+  --z-map: 1;
+  --z-map-tiles: 10;
+  --z-map-overlays: 20;
+  --z-map-markers: 30;
+  --z-map-popups: 40;
+  
+  /* Map controls (100-499) */
+  --z-map-controls: 100;
+  --z-leaflet-controls: 400;
+  
+  /* Floating UI elements (500-999) */
+  --z-floating-buttons: 500;
+  --z-status-bar: 600;
+  --z-compass: 700;
+  --z-recording-indicator: 800;
+  --z-recenter-btn: 850;
+  
+  /* Navigation (1000-1099) */
+  --z-dropdown: 1000;
+  --z-sticky-nav: 1020;
+  --z-auth-bar: 1030;
+  --z-top-nav: 1040;
+  --z-mobile-menu: 1050;
+  
+  /* Overlays and modals (10000-10999) */
+  --z-modal-backdrop: 10000;
+  --z-modal: 10001;
+  --z-modal-content: 10002;
+  
+  /* Notifications - Above modals (11000+) */
+  --z-toast: 11000;
+  --z-tooltip: 11001;
+  
+  /* Emergency/Critical - Use sparingly (99999) */
+  --z-critical: 99999;
+
+  /* ==============================================
+     BRAND COLORS
+     ============================================== */
+  --color-primary: #4a7c59;
+  --color-primary-dark: #2c5530;
+  --color-primary-light: #6b9975;
+  --color-primary-lighter: #8fb09a;
+  
+  /* ==============================================
+     ACTION COLORS
+     ============================================== */
+  --color-success: #4CAF50;
+  --color-success-dark: #45a049;
+  --color-success-light: #81C784;
+  
+  --color-warning: #FFA500;
+  --color-warning-dark: #FF8C00;
+  --color-warning-light: #FFB732;
+  
+  --color-danger: #e74c3c;
+  --color-danger-dark: #c0392b;
+  --color-danger-light: #ec7063;
+  
+  --color-info: #2196F3;
+  --color-info-dark: #1976D2;
+  --color-info-light: #64B5F6;
+  
+  /* ==============================================
+     NEUTRAL COLORS (Light Mode)
+     ============================================== */
+  --color-text-primary: #212121;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #888888;
+  --color-text-hint: #999999;
+  --color-text-disabled: #bdbdbd;
+  
+  --color-border: #e0e0e0;
+  --color-border-light: #f0f0f0;
+  --color-border-dark: #d0d0d0;
+  
+  --color-background: #f5f5f5;
+  --color-background-dark: #eeeeee;
+  --color-surface: #ffffff;
+  --color-surface-hover: #fafafa;
+  
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay-dark: rgba(0, 0, 0, 0.7);
+  --color-overlay-light: rgba(0, 0, 0, 0.3);
+  
+  /* ==============================================
+     SPACING SCALE (8pt Grid System)
+     ============================================== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-xxxl: 64px;
+  
+  /* ==============================================
+     TYPOGRAPHY
+     ============================================== */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+                       'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'SF Mono', Monaco, Consolas, 'Liberation Mono', 
+                       'Courier New', monospace;
+  
+  /* Font Sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+  --font-size-4xl: 40px;
+  
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* ==============================================
+     BORDER RADIUS
+     ============================================== */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* ==============================================
+     SHADOWS (Material Design Elevation)
+     ============================================== */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 16px 24px rgba(0, 0, 0, 0.25);
+  --shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.3);
+  
+  /* Focus Shadow */
+  --shadow-focus: 0 0 0 3px rgba(74, 124, 89, 0.3);
+  --shadow-focus-danger: 0 0 0 3px rgba(231, 76, 60, 0.3);
+  --shadow-focus-info: 0 0 0 3px rgba(33, 150, 243, 0.3);
+  
+  /* ==============================================
+     TRANSITIONS
+     ============================================== */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+  
+  --transition-ease-in: 200ms ease-in;
+  --transition-ease-out: 200ms ease-out;
+  --transition-ease-in-out: 200ms ease-in-out;
+  
+  /* ==============================================
+     BREAKPOINTS (for reference in JS)
+     ============================================== */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  
+  /* ==============================================
+     COMPONENT-SPECIFIC TOKENS
+     ============================================== */
+  
+  /* Buttons */
+  --button-height-sm: 36px;
+  --button-height-base: 44px;
+  --button-height-lg: 52px;
+  
+  /* Inputs */
+  --input-height: 44px;
+  --input-border-width: 2px;
+  
+  /* Cards */
+  --card-padding: var(--space-md);
+  --card-radius: var(--radius-lg);
+  
+  /* Modal */
+  --modal-max-width: 500px;
+  --modal-padding: var(--space-lg);
+  
+  /* Toast */
+  --toast-width: 360px;
+  --toast-padding: var(--space-md);
+  
+  /* Navigation */
+  --nav-height: 60px;
+  --auth-bar-height: 45px;
+}
+
+/* ==============================================
+   DARK MODE
+   ============================================== */
+[data-theme="dark"],
+body.dark-mode {
+  /* Text Colors */
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #bbbbbb;
+  --color-text-tertiary: #999999;
+  --color-text-hint: #888888;
+  --color-text-disabled: #555555;
+  
+  /* Borders */
+  --color-border: #444444;
+  --color-border-light: #555555;
+  --color-border-dark: #333333;
+  
+  /* Backgrounds */
+  --color-background: #1a1a1a;
+  --color-background-dark: #0d0d0d;
+  --color-surface: #2a2a2a;
+  --color-surface-hover: #333333;
+  
+  /* Overlays */
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-overlay-dark: rgba(0, 0, 0, 0.9);
+  --color-overlay-light: rgba(0, 0, 0, 0.5);
+  
+  /* Adjust shadows for dark mode */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 16px 24px rgba(0, 0, 0, 0.7);
+  --shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.8);
+}
+
+/* ==============================================
+   BASE STYLES
+   ============================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+}
+
+/* ==============================================
+   UTILITY CLASSES
+   ============================================== */
+
+/* Spacing Utilities */
+.m-0 { margin: 0; }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+
+.p-0 { padding: 0; }
+.p-sm { padding: var(--space-sm); }
+.p-md { padding: var(--space-md); }
+.p-lg { padding: var(--space-lg); }
+
+/* Text Utilities */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-hint { color: var(--color-text-hint); }
+.text-success { color: var(--color-success); }
+.text-danger { color: var(--color-danger); }
+.text-warning { color: var(--color-warning); }
+
+.text-sm { font-size: var(--font-size-sm); }
+.text-base { font-size: var(--font-size-base); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+/* Display Utilities */
+.hidden { display: none !important; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+
+/* Flex Utilities */
+.flex-row { flex-direction: row; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+.flex-wrap { flex-wrap: wrap; }
+
+/* Visibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ==============================================
+   Z-INDEX HELPER CLASSES
+   Use these when you need inline z-index control
+   ============================================== */
+
+.z-base { z-index: var(--z-base); }
+.z-map { z-index: var(--z-map); }
+.z-map-controls { z-index: var(--z-map-controls); }
+.z-floating { z-index: var(--z-floating-buttons); }
+.z-status { z-index: var(--z-status-bar); }
+.z-compass { z-index: var(--z-compass); }
+.z-recording { z-index: var(--z-recording-indicator); }
+.z-dropdown { z-index: var(--z-dropdown); }
+.z-sticky { z-index: var(--z-sticky-nav); }
+.z-nav { z-index: var(--z-top-nav); }
+.z-modal-backdrop { z-index: var(--z-modal-backdrop); }
+.z-modal { z-index: var(--z-modal); }
+.z-toast { z-index: var(--z-toast); }
+
+/* ==============================================
+   PRINT STYLES
+   ============================================== */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ==============================================
+   REDUCED MOTION
+   ============================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==============================================
+   HIGH CONTRAST MODE
+   ============================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000000;
+    --color-border-light: #333333;
+  }
+}

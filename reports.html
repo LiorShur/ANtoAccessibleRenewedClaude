@@ -1,0 +1,4404 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- CLEAN-VERSION-2024-12-08 -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessibility Reports - Accessible</title>
+  <meta name="description" content="View and report accessibility barriers in outdoor spaces and urban areas">
+  
+  <!-- Preconnect to external origins for faster loading -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2c5530">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="src/css/design-system.css">
+  <link rel="stylesheet" href="src/css/base.css">
+  <link rel="stylesheet" href="src/css/buttons.css">
+  <link rel="stylesheet" href="src/css/components.css">
+  <link rel="stylesheet" href="src/css/modals.css">
+  <link rel="stylesheet" href="src/css/toasts.css">
+  <link rel="stylesheet" href="src/css/loading-states.css">
+  <link rel="stylesheet" href="src/css/navigation-features.css">
+  <link rel="stylesheet" href="src/css/themes.css">
+  <link rel="stylesheet" href="src/css/auth.css">
+  <link rel="stylesheet" href="src/css/high-contrast.css">
+  <link rel="stylesheet" href="src/css/ui-utilities.css">
+  <link rel="stylesheet" href="src/css/pwa.css">
+  <link rel="stylesheet" href="src/css/unified-nav.css">
+  <link rel="stylesheet" href="src/css/mobile-responsive.css">
+  <link rel="stylesheet" href="src/css/error-messages.css">
+
+  <!-- CRITICAL: Apply saved preferences immediately to prevent flash -->
+  <script>
+    (function() {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+        if (prefs.highContrast) {
+          document.documentElement.classList.add('high-contrast');
+        }
+        if (prefs.reducedMotion) {
+          document.documentElement.classList.add('reduced-motion');
+        }
+      } catch(e) {}
+    })();
+  </script>
+  
+  <style>
+    /* ==========================================
+       WCAG ACCESSIBILITY STYLES
+       ========================================== */
+    
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Focus styles for all interactive elements */
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 3px solid #2c5530;
+      outline-offset: 2px;
+    }
+
+    /* Skip to main content link */
+    .skip-link {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: #2c5530;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100000;
+      text-decoration: none;
+      font-weight: 500;
+      border-radius: 0 0 4px 0;
+      transform: translateY(-100%);
+      transition: transform 0.2s ease;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    /* ==========================================
+       REPORTS PAGE STYLES - FIXED
+       ========================================== */
+    
+    /* CRITICAL: Override body overflow for scrolling */
+    html, body {
+      height: auto !important;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto !important;
+    }
+
+    body { 
+      background: linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--primary-dark, #764ba2) 100%);
+      padding-top: 64px; /* Space for fixed nav */
+    }
+
+    .page-container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .page-header {
+      background: white; 
+      border-radius: 16px;
+      padding: 32px; 
+      margin-bottom: 24px; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .page-header h1 { 
+      font-size: 2rem; 
+      color: #1a1a1a; 
+      margin-bottom: 8px; 
+    }
+    .page-header p { 
+      color: #6b7280; 
+      font-size: 1.1rem; 
+      margin: 0; 
+    }
+
+    /* Stats */
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 16px; 
+      margin-bottom: 24px; 
+    }
+    .stat-card { 
+      background: white; 
+      border-radius: 12px; 
+      padding: 24px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+      text-align: center; 
+    }
+    .stat-value { 
+      font-size: 2.5rem; 
+      font-weight: 700; 
+      color: #667eea; 
+      margin-bottom: 8px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .stat-label { 
+      color: #6b7280; 
+      font-size: 0.875rem; 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px; 
+    }
+    
+    /* Loading spinner for stats */
+    .stat-loading {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Filters */
+    .filters-section { 
+      background: white; 
+      border-radius: 12px; 
+      padding: 24px; 
+      margin-bottom: 24px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    }
+    .filters-title { 
+      font-size: 1.25rem; 
+      font-weight: 600; 
+      margin-bottom: 16px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+    }
+    .filters-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 16px; 
+      margin-bottom: 16px; 
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #374151;
+    }
+    .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: white;
+    }
+    .form-select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .filter-actions { 
+      display: flex; 
+      gap: 12px; 
+      flex-wrap: wrap; 
+    }
+
+    /* Map */
+    .map-section { 
+      background: white; 
+      border-radius: 12px; 
+      padding: 16px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+      margin-bottom: 24px; 
+    }
+    .map-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 16px; 
+      flex-wrap: wrap; 
+      gap: 12px; 
+    }
+    .map-header h2 { 
+      font-size: 1.5rem; 
+      margin: 0; 
+    }
+    .map-controls { 
+      display: flex; 
+      gap: 8px; 
+    }
+    .map-control-btn {
+      width: 44px; 
+      height: 44px; 
+      background: #f3f4f6;
+      border: none; 
+      border-radius: 8px; 
+      cursor: pointer;
+      font-size: 1.25rem; 
+      transition: all 0.2s;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+    }
+    .map-control-btn:hover { 
+      background: #667eea; 
+      color: white; 
+      transform: translateY(-2px); 
+    }
+
+    #reportMap { 
+      height: 500px; 
+      border-radius: 8px; 
+      width: 100%; 
+      z-index: 1 !important; 
+    }
+    #reportMap.fullscreen { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      z-index: 9999 !important; 
+      height: 100vh !important; 
+      width: 100vw !important; 
+      border-radius: 0; 
+    }
+
+    /* Timeline */
+    .timeline-section { 
+      background: white; 
+      border-radius: 12px; 
+      padding: 24px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 100px; /* Space for FAB */
+    }
+    .timeline-section h2 { 
+      font-size: 1.5rem; 
+      margin-bottom: 16px; 
+    }
+    #reportTimeline {
+      min-height: 200px;
+    }
+
+    /* Report Card */
+    .report-card {
+      padding: 16px;
+      border-left: 4px solid #f59e0b;
+      margin-bottom: 16px;
+      background: #f9fafb;
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .report-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .report-card.severity-critical { border-left-color: #dc2626; }
+    .report-card.severity-high { border-left-color: #ea580c; }
+    .report-card.severity-medium { border-left-color: #f59e0b; }
+    .report-card.severity-low { border-left-color: #84cc16; }
+
+    /* Temporary marker pulse animation */
+    @keyframes tempPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+    }
+
+    .report-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+    .report-card-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin: 0;
+      color: #111827;
+    }
+    .report-card-date {
+      font-size: 0.75rem;
+      color: #6b7280;
+      white-space: nowrap;
+      margin-left: 16px;
+    }
+    .report-card-description {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin: 0 0 8px 0;
+    }
+    .report-card-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    /* FAB - positioned above bottom nav */
+    .report-fab {
+      position: fixed; 
+      bottom: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0)); 
+      right: 24px;
+      width: 60px; 
+      height: 60px; 
+      background: #ef4444; 
+      color: white;
+      border: 3px solid white; 
+      border-radius: 50%; 
+      font-size: 1.5rem;
+      cursor: pointer; 
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); 
+      transition: all 0.2s;
+      z-index: 1000; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+    }
+    .report-fab:hover { 
+      transform: scale(1.1); 
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4); 
+    }
+
+    /* Report Detail Modal */
+    #reportDetailModal {
+      position: fixed !important; 
+      top: 0 !important; 
+      left: 0 !important; 
+      right: 0 !important; 
+      bottom: 0 !important;
+      z-index: 100000 !important; 
+      background: rgba(0, 0, 0, 0.5) !important;
+      display: flex !important; 
+      align-items: center !important; 
+      justify-content: center !important;
+      padding: 16px;
+    }
+    #reportDetailModal.hidden { 
+      display: none !important; 
+    }
+    #reportDetailModal .modal-content {
+      background: white; 
+      border-radius: 16px;
+      max-width: 800px; 
+      width: 100%; 
+      max-height: 90vh;
+      overflow-y: auto; 
+      position: relative; 
+      z-index: 100001 !important;
+    }
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 4px 8px;
+    }
+    .modal-close:hover {
+      color: #111827;
+    }
+    .modal-body {
+      padding: 24px;
+    }
+
+    /* Loading State */
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 40px;
+      color: #6b7280;
+    }
+    .loading-spinner::before {
+      content: '';
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 
+      to { transform: rotate(360deg); } 
+    }
+
+    /* Top Navigation */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 10000;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #111827;
+      text-decoration: none;
+    }
+    .nav-brand-icon {
+      font-size: 1.5rem;
+    }
+    .nav-auth-indicator {
+      display: flex;
+      align-items: center;
+    }
+    .nav-auth-indicator {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .nav-auth-indicator .auth-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #f3f4f6;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      color: #4b5563;
+    }
+    .nav-auth-indicator .auth-status.signed-in {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      color: #4b5563;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .nav-link:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .nav-link.active {
+      background: #667eea;
+      color: white;
+    }
+    .nav-auth {
+      margin-left: 16px;
+    }
+    .menu-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      flex-shrink: 0;
+    }
+    .menu-toggle:focus {
+      outline: none !important;
+      background: transparent !important;
+    }
+    .hamburger-icon {
+      width: 24px;
+      height: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      width: 24px;
+      height: 3px;
+      background: #374151;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(2) {
+      opacity: 0;
+    }
+    .menu-toggle.active .hamburger-icon span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #5a67d8;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    /* Report Create Modal */
+    #reportCreateModal {
+      position: fixed !important; 
+      top: 0 !important; 
+      left: 0 !important; 
+      right: 0 !important; 
+      bottom: 0 !important;
+      z-index: 100000 !important; 
+      background: rgba(0, 0, 0, 0.5) !important;
+      display: flex !important; 
+      align-items: center !important; 
+      justify-content: center !important;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    #reportCreateModal.hidden { 
+      display: none !important; 
+    }
+    #reportCreateModal .modal-content {
+      background: white; 
+      border-radius: 16px;
+      max-width: 600px; 
+      width: 100%; 
+      max-height: 90vh;
+      overflow-y: auto; 
+      position: relative;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    }
+    .loading-overlay.hidden {
+      display: none;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      body {
+        padding-top: 56px;
+      }
+      .top-nav {
+        height: 56px;
+        padding: 0 16px;
+      }
+      .page-container { 
+        padding: 16px; 
+      }
+      .page-header { 
+        padding: 20px; 
+      }
+      .page-header h1 { 
+        font-size: 1.5rem; 
+      }
+      #reportMap { 
+        height: 300px; 
+      }
+      .filters-grid { 
+        grid-template-columns: 1fr; 
+      }
+      .stats-grid { 
+        grid-template-columns: repeat(2, 1fr); 
+      }
+      .report-fab { 
+        bottom: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0)); 
+        right: 16px; 
+        width: 56px; 
+        height: 56px; 
+        font-size: 1.5rem; 
+      }
+      
+      /* Hide top nav menu on mobile (replaced by bottom nav) */
+      .menu-toggle { 
+        display: none !important;
+      }
+      .nav-menu {
+        display: none !important;
+      }
+    }
+    
+    /* High contrast toggle - circular button style */
+    .high-contrast-toggle {
+      position: fixed;
+      bottom: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0));
+      left: 20px;
+      z-index: 9999;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: rgba(26, 26, 26, 0.95);
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .high-contrast-toggle .toggle-text {
+      display: none;
+    }
+    
+    .high-contrast-toggle .toggle-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* ============================================
+       AUTH MODAL - FIXED POSITIONING FOR ALL ELEMENTS
+       ============================================ */
+    #authModal {
+      display: block !important;
+    }
+    
+    #authModal.hidden {
+      display: none !important;
+    }
+    
+    #authModal > .auth-modal-backdrop {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      backdrop-filter: blur(10px) !important;
+      z-index: 999998 !important;
+    }
+    
+    #authModal > .auth-modal-container {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      background: white !important;
+      border-radius: 20px !important;
+      width: 90% !important;
+      max-width: 420px !important;
+      max-height: 90vh !important;
+      overflow: hidden !important;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3) !important;
+      z-index: 999999 !important;
+    }
+  </style>
+  
+  <!-- Global Bottom Navigation -->
+  <link rel="stylesheet" href="src/css/global-nav.css">
+  
+  <!-- Analytics & Error Monitoring -->
+  <script src="src/utils/monitoring.js" defer></script>
+</head>
+<body>
+  <!-- Skip to main content link for keyboard users -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  
+  <div id="loadingOverlay" class="loading-overlay" role="alert" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <span class="visually-hidden">Loading...</span>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="top-nav" role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-brand">
+      <span class="nav-brand-icon" aria-hidden="true">🌲</span>
+      <span>Accessible</span>
+    </a>
+    <div class="nav-auth-indicator">
+      <div class="auth-status" id="navAuthIndicator">
+        <span aria-hidden="true">👤</span>
+        <span id="navAuthStatusText">Guest</span>
+      </div>
+    </div>
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
+      <span class="hamburger-icon" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+    </button>
+    <div class="nav-menu" id="navMenu" role="menu">
+      <a href="index.html" class="nav-link" role="menuitem">🏠 Home</a>
+      <a href="tracker.html" class="nav-link" role="menuitem">🗺️ Track</a>
+      <a href="reports.html" class="nav-link active" role="menuitem" aria-current="page">📋 Reports</a>
+      <a href="profile.html" class="nav-link" id="profileNavLink" style="display: none;" role="menuitem">👤 Profile</a>
+      <div class="nav-auth">
+        <button id="navAuthBtn" class="btn btn-primary" aria-label="Sign in to your account">Sign In</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- High Contrast Toggle -->
+  <button id="highContrastToggle" class="high-contrast-toggle" aria-label="Toggle high contrast mode for outdoor visibility" title="Toggle high contrast mode" aria-pressed="false">
+    <span class="toggle-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18V4c4.41 0 8 3.59 8 8s-3.59 8-8 8z"/>
+      </svg>
+    </span>
+    <span class="toggle-text">High Contrast</span>
+  </button>
+
+  <main id="main-content" class="page-container" role="main">
+    <!-- Header -->
+    <div class="page-header">
+      <h1>📋 Accessibility Reports</h1>
+      <p>Report and view accessibility barriers in outdoor spaces and urban areas</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" aria-label="Report statistics">
+      <div class="stat-card">
+        <div class="stat-value" id="totalReports" aria-live="polite"><span class="stat-loading"></span></div>
+        <div class="stat-label">Total Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="newReports" aria-live="polite"><span class="stat-loading"></span></div>
+        <div class="stat-label">New</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="resolvedReports" aria-live="polite"><span class="stat-loading"></span></div>
+        <div class="stat-label">Resolved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="yourLocation" aria-live="polite">Detecting...</div>
+        <div class="stat-label">Your Location</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <h2 class="filters-title"><span>🔍</span><span>Filter Reports</span></h2>
+      <div class="filters-grid">
+        <div class="form-group">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="severityFilter">Severity</label>
+          <select id="severityFilter" class="form-select">
+            <option value="">All Severities</option>
+            <option value="5,critical">⚠️ 5 - Critical</option>
+            <option value="4,high">⚠️ 4 - High</option>
+            <option value="3,medium">⚠️ 3 - Medium</option>
+            <option value="2,low">⚠️ 2 - Low</option>
+            <option value="1,minor">⚠️ 1 - Minor</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="typeFilter">Issue Type</label>
+          <select id="typeFilter" class="form-select">
+            <option value="">All Types</option>
+            <option value="curb_ramp">Missing/Damaged Curb Ramp</option>
+            <option value="sidewalk_blocked">Blocked Sidewalk</option>
+            <option value="damaged_sidewalk">Damaged Sidewalk</option>
+            <option value="inaccessible_entrance">Inaccessible Entrance</option>
+            <option value="broken_elevator">Broken Elevator/Lift</option>
+            <option value="parking_blocked">Blocked Accessible Parking</option>
+            <option value="trail_obstacle">Trail Obstacle</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="durationFilter">Duration Type</label>
+          <select id="durationFilter" class="form-select">
+            <option value="">All Types</option>
+            <option value="permanent">🏗️ Permanent Only</option>
+            <option value="temporary">⏳ Temporary Only</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" id="applyFiltersBtn">🔍 Apply Filters</button>
+        <button class="btn btn-secondary" id="resetFiltersBtn">🔄 Reset</button>
+        <button class="btn btn-secondary" id="useMyLocationBtn">📍 Use My Location</button>
+        <button class="btn btn-secondary" id="exportAllBtn" title="Export filtered reports to CSV for 311 submission">📊 Export CSV</button>
+        <button class="btn btn-secondary" id="printAllBtn" title="Print all filtered reports (can save as PDF)">🖨️ Print All</button>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div class="map-section">
+      <div class="map-header">
+        <h2>🗺️ Report Map</h2>
+        <div class="map-controls">
+          <button class="map-control-btn" id="centerMapBtn" title="Center on my location">📍</button>
+          <button class="map-control-btn" id="fullscreenBtn" title="Toggle fullscreen">⛶</button>
+        </div>
+      </div>
+      <div id="reportMap"></div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-section">
+      <h2>📋 Recent Reports</h2>
+      <div id="reportTimeline">
+        <div class="loading-spinner">Loading reports...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FAB -->
+  <button class="report-fab" id="reportFabBtn" title="Report an issue" aria-label="Create new report">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+    </svg>
+  </button>
+
+  <!-- Report Detail Modal -->
+  <div id="reportDetailModal" class="hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Report Details</h2>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Content loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Report Modal -->
+  <div id="createReportModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100000; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 16px;">
+    <div class="modal-content" style="background: white; border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2>📋 Report Accessibility Issue</h2>
+        <button class="modal-close" id="closeCreateModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        <form id="createReportForm">
+          <!-- Location -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">📍 Location</label>
+            <div id="locationPickerMap" style="height: 200px; border-radius: 8px; margin-bottom: 8px; background: #f3f4f6;"></div>
+            <p style="font-size: 0.875rem; color: #6b7280; margin: 0;" id="selectedLocationText">Click on the map to select location, or use current location</p>
+            <input type="hidden" id="reportLat" required>
+            <input type="hidden" id="reportLng" required>
+            <button type="button" id="useCurrentLocationBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%;">📍 Use My Current Location</button>
+          </div>
+
+          <!-- Issue Type -->
+          <div style="margin-bottom: 20px;">
+            <label for="reportIssueType" style="display: block; margin-bottom: 8px; font-weight: 600;">🏷️ Issue Type *</label>
+            <select id="reportIssueType" class="form-select" required>
+              <option value="">Select issue type...</option>
+              <optgroup label="Sidewalk Issues">
+                <option value="curb_ramp">🚧 Missing/Damaged Curb Ramp</option>
+                <option value="sidewalk_blocked">⛔ Blocked Sidewalk</option>
+                <option value="damaged_sidewalk">💔 Damaged Sidewalk</option>
+                <option value="tactile_paving">🔲 Missing Tactile Paving</option>
+              </optgroup>
+              <optgroup label="Building Access">
+                <option value="inaccessible_entrance">🚪 Inaccessible Entrance</option>
+                <option value="broken_elevator">🛗 Broken Elevator/Lift</option>
+                <option value="heavy_doors">🚪 Heavy/Manual Doors</option>
+                <option value="stairs_only">🪜 Stairs Only Access</option>
+              </optgroup>
+              <optgroup label="Parking">
+                <option value="parking_blocked">🅿️ Blocked Accessible Parking</option>
+                <option value="no_parking">🚫 No Accessible Parking</option>
+                <option value="damaged_parking">⚠️ Damaged Parking Space</option>
+              </optgroup>
+              <optgroup label="Facilities">
+                <option value="inaccessible_restroom">🚻 Inaccessible Restroom</option>
+                <option value="inaccessible_fountain">🚰 Inaccessible Water Fountain</option>
+                <option value="no_seating">💺 No Accessible Seating</option>
+              </optgroup>
+              <optgroup label="Trail/Outdoor">
+                <option value="trail_obstacle">🪨 Trail Obstacle</option>
+                <option value="trail_erosion">🕳️ Trail Erosion/Damage</option>
+                <option value="overgrown">🌿 Overgrown Vegetation</option>
+                <option value="missing_sign">🪧 Missing Signage</option>
+              </optgroup>
+              <optgroup label="Transit">
+                <option value="bus_stop">🚌 Inaccessible Bus Stop</option>
+                <option value="transit_station">🚇 Inaccessible Station</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="other">📝 Other Issue</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- Severity - Enhanced 1-5 Scale -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">⚠️ Severity Level *</label>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 12px;">Rate how much this barrier impacts accessibility (1 = minor inconvenience, 5 = completely blocks access)</p>
+            
+            <div class="severity-scale" style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="1" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">1️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #22c55e;">Minor</span>
+              </label>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="2" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">2️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #84cc16;">Low</span>
+              </label>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="3" checked style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">3️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #f59e0b;">Medium</span>
+              </label>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="4" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">4️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #ea580c;">High</span>
+              </label>
+              <label class="severity-option" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 8px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="reportSeverity" value="5" style="display: none;">
+                <span style="font-size: 1.5rem; margin-bottom: 4px;">5️⃣</span>
+                <span style="font-size: 0.75rem; font-weight: 600; color: #dc2626;">Critical</span>
+              </label>
+            </div>
+            
+            <div id="severityDescription" style="padding: 12px; background: #fef3c7; border-radius: 8px; font-size: 0.85rem; color: #92400e;">
+              <strong>Medium (3):</strong> Significant barrier that makes the area difficult to use for people with mobility needs.
+            </div>
+          </div>
+          
+          <script>
+            // Severity scale interaction
+            document.querySelectorAll('.severity-option').forEach(option => {
+              option.addEventListener('click', function() {
+                // Remove selected state from all
+                document.querySelectorAll('.severity-option').forEach(o => {
+                  o.style.borderColor = '#e5e7eb';
+                  o.style.background = 'white';
+                  o.style.transform = 'scale(1)';
+                });
+                
+                // Add selected state
+                const input = this.querySelector('input');
+                input.checked = true;
+                const value = parseInt(input.value);
+                
+                const colors = {
+                  1: { border: '#22c55e', bg: '#f0fdf4' },
+                  2: { border: '#84cc16', bg: '#f7fee7' },
+                  3: { border: '#f59e0b', bg: '#fef3c7' },
+                  4: { border: '#ea580c', bg: '#fff7ed' },
+                  5: { border: '#dc2626', bg: '#fef2f2' }
+                };
+                
+                this.style.borderColor = colors[value].border;
+                this.style.background = colors[value].bg;
+                this.style.transform = 'scale(1.05)';
+                
+                // Update description
+                const descriptions = {
+                  1: { label: 'Minor (1)', text: 'Small inconvenience that doesn\'t significantly impact accessibility. Example: slightly uneven pavement.', color: '#166534', bg: '#f0fdf4' },
+                  2: { label: 'Low (2)', text: 'Noticeable barrier that causes minor difficulty. Example: narrow section that requires careful navigation.', color: '#3f6212', bg: '#f7fee7' },
+                  3: { label: 'Medium (3)', text: 'Significant barrier that makes the area difficult to use for people with mobility needs.', color: '#92400e', bg: '#fef3c7' },
+                  4: { label: 'High (4)', text: 'Major barrier that prevents independent access for many users. Example: stairs with no ramp alternative.', color: '#9a3412', bg: '#fff7ed' },
+                  5: { label: 'Critical (5)', text: 'Complete barrier that blocks access entirely. Example: locked gate, missing bridge, dangerous hazard.', color: '#991b1b', bg: '#fef2f2' }
+                };
+                
+                const desc = document.getElementById('severityDescription');
+                desc.innerHTML = '<strong>' + descriptions[value].label + ':</strong> ' + descriptions[value].text;
+                desc.style.background = descriptions[value].bg;
+                desc.style.color = descriptions[value].color;
+              });
+              
+              // Initialize selected state
+              const input = option.querySelector('input');
+              if (input.checked) {
+                option.click();
+              }
+            });
+          </script>
+
+          <!-- Temporary/Permanent Indicator -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">🕐 Duration Type</label>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 12px;">Is this a temporary or permanent barrier?</p>
+            <div style="display: flex; gap: 12px;">
+              <label class="duration-option" style="flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="durationType" value="permanent" checked style="width: 20px; height: 20px;">
+                <div>
+                  <span style="font-size: 1.2rem;">🏗️</span>
+                  <span style="font-weight: 600; margin-left: 4px;">Permanent</span>
+                  <div style="font-size: 0.8rem; color: #6b7280;">Ongoing structural issue</div>
+                </div>
+              </label>
+              <label class="duration-option" style="flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white;">
+                <input type="radio" name="durationType" value="temporary" style="width: 20px; height: 20px;">
+                <div>
+                  <span style="font-size: 1.2rem;">⏳</span>
+                  <span style="font-weight: 600; margin-left: 4px;">Temporary</span>
+                  <div style="font-size: 0.8rem; color: #6b7280;">Construction, seasonal, etc.</div>
+                </div>
+              </label>
+            </div>
+            
+            <!-- Expected resolution date (only shown for temporary) -->
+            <div id="expectedResolutionContainer" style="display: none; margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+              <label for="expectedResolution" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">📅 Expected Resolution Date (optional)</label>
+              <input type="date" id="expectedResolution" class="form-select" style="width: 100%;">
+              <p style="font-size: 0.75rem; color: #0369a1; margin-top: 6px; margin-bottom: 0;">When do you expect this barrier to be removed?</p>
+            </div>
+          </div>
+
+          <script>
+            // Duration type interaction
+            document.querySelectorAll('.duration-option').forEach(option => {
+              option.addEventListener('click', function() {
+                // Update visual state
+                document.querySelectorAll('.duration-option').forEach(o => {
+                  o.style.borderColor = '#e5e7eb';
+                  o.style.background = 'white';
+                });
+                this.style.borderColor = '#3b82f6';
+                this.style.background = '#eff6ff';
+                
+                // Show/hide expected resolution date
+                const isTemporary = this.querySelector('input').value === 'temporary';
+                document.getElementById('expectedResolutionContainer').style.display = isTemporary ? 'block' : 'none';
+              });
+            });
+          </script>
+
+          <!-- Title -->
+          <div style="margin-bottom: 20px;">
+            <label for="reportTitle" style="display: block; margin-bottom: 8px; font-weight: 600;">📝 Title *</label>
+            <input type="text" id="reportTitle" class="form-select" placeholder="Brief description of the issue" required style="width: 100%;">
+          </div>
+
+          <!-- Description -->
+          <div style="margin-bottom: 20px;">
+            <label for="reportDescription" style="display: block; margin-bottom: 8px; font-weight: 600;">📄 Description</label>
+            <textarea id="reportDescription" class="form-select" placeholder="Provide more details about the accessibility barrier..." rows="4" style="width: 100%; resize: vertical;"></textarea>
+          </div>
+
+          <!-- Photos -->
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;">📷 Photos</label>
+            <input type="file" id="reportPhotos" accept="image/*" multiple style="display: none;">
+            <button type="button" id="addPhotosBtn" class="btn btn-secondary" style="width: 100%;">📸 Add Photos</button>
+            <div id="photoPreviewGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 12px;"></div>
+          </div>
+
+          <!-- Address (optional) -->
+          <div style="margin-bottom: 20px;">
+            <label for="reportAddress" style="display: block; margin-bottom: 8px; font-weight: 600;">🏠 Address (optional)</label>
+            <input type="text" id="reportAddress" class="form-select" placeholder="e.g., 123 Main St, Cape Town" style="width: 100%;">
+          </div>
+
+          <!-- Submit -->
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeCreateReportModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="flex: 1;" id="submitReportBtn">📤 Submit Report</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- IMMEDIATE UI Handlers - No module dependencies -->
+  <script>
+    (function() {
+      // Hamburger Menu - Immediate handler
+      var menuToggle = document.getElementById('menuToggle');
+      var navMenu = document.getElementById('navMenu');
+      
+      console.log('[NAV] menuToggle:', menuToggle);
+      console.log('[NAV] navMenu:', navMenu);
+      
+      function closeMenu() {
+        navMenu?.classList.remove('active');
+        menuToggle?.classList.remove('active');
+        console.log('[NAV] Menu closed');
+      }
+      
+      menuToggle?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        navMenu?.classList.toggle('active');
+        menuToggle?.classList.toggle('active');
+        console.log('[NAV] Menu toggled, navMenu.classList:', navMenu?.classList.toString());
+        console.log('[NAV] navMenu display:', window.getComputedStyle(navMenu).display);
+      });
+      
+      navMenu?.querySelectorAll('a, button, .btn').forEach(function(el) {
+        el.addEventListener('click', closeMenu);
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (navMenu?.classList.contains('active')) {
+          if (!navMenu.contains(e.target) && !menuToggle?.contains(e.target)) {
+            closeMenu();
+          }
+        }
+      });
+      
+      // High Contrast Toggle - Immediate handler
+      var hcToggle = document.getElementById('highContrastToggle');
+      
+      function updateHCButton() {
+        var isHC = document.documentElement.classList.contains('high-contrast');
+        if (hcToggle) {
+          var svg = hcToggle.querySelector('svg');
+          if (svg) {
+            svg.style.fill = isHC ? '#000' : '#fff';
+          }
+          hcToggle.style.background = isHC ? '#fff' : 'rgba(26, 26, 26, 0.95)';
+          hcToggle.style.borderColor = isHC ? '#000' : '#333';
+        }
+      }
+      
+      updateHCButton();
+      
+      // Mark as initialized to prevent module from adding duplicate listener
+      if (hcToggle) hcToggle.dataset.prefsInitialized = 'true';
+      
+      hcToggle?.addEventListener('click', function() {
+        var isNowHC = document.documentElement.classList.toggle('high-contrast');
+        try {
+          var prefs = JSON.parse(localStorage.getItem('accessNature_displayPrefs') || '{}');
+          prefs.highContrast = isNowHC;
+          localStorage.setItem('accessNature_displayPrefs', JSON.stringify(prefs));
+        } catch(e) {}
+        updateHCButton();
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+      });
+    })();
+  </script>
+
+  <!-- PWA & Display Preferences -->
+  <script type="module" src="src/ui/displayPreferences.js"></script>
+  <script type="module" src="src/pwa/pwaManager.js"></script>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    import { getFirestore, collection, getDocs, getDoc, doc, query, orderBy, limit, where, updateDoc, arrayUnion, arrayRemove, increment, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js';
+    import { offlineIndicator } from './src/ui/offlineIndicator.js';
+    import { loadingStates } from './src/ui/loadingStates.js';
+    import { gamificationUI } from './src/ui/gamificationUI.js';
+    import { accessibilityRating } from './src/features/accessibilityRating.js';
+    import { showError, getErrorMessage } from './src/utils/errorMessages.js';
+    import { userService } from './src/services/userService.js';
+
+    // Firebase config - Accessible Beta
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
+      authDomain: "accessnaturebeta-821a2.firebaseapp.com",
+      projectId: "accessnaturebeta-821a2",
+      storageBucket: "accessnaturebeta-821a2.appspot.com",
+      messagingSenderId: "670888101781",
+      appId: "1:670888101781:web:b4cf57f58e86182466589c",
+      measurementId: "G-QL82J92CP7"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Global state
+    let map = null;
+    let userLocationMarker = null;
+    let currentLocation = null;
+    let allReports = [];
+    let filteredReports = [];
+    let markerClusterGroup = null;
+    let currentUser = null;
+
+    // Severity colors - supports both numeric (1-5) and text values
+    const severityColors = {
+      // Numeric 1-5 scale
+      1: '#22c55e',  // Minor - green
+      2: '#84cc16',  // Low - lime
+      3: '#f59e0b',  // Medium - amber
+      4: '#ea580c',  // High - orange
+      5: '#dc2626',  // Critical - red
+      // Legacy text values (backward compatibility)
+      minor: '#22c55e',
+      low: '#84cc16',
+      medium: '#f59e0b',
+      high: '#ea580c',
+      critical: '#dc2626'
+    };
+    
+    // Severity labels for display
+    const severityLabels = {
+      1: 'Minor', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Critical',
+      minor: 'Minor', low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical'
+    };
+
+    // Issue type icons
+    const issueIcons = {
+      curb_ramp: '♿',
+      sidewalk_blocked: '🚧',
+      damaged_sidewalk: '💔',
+      tactile_paving: '🔲',
+      inaccessible_entrance: '🚪',
+      broken_elevator: '🛗',
+      heavy_doors: '🚪',
+      stairs_only: '🪜',
+      parking_blocked: '🅿️',
+      no_parking: '🚫',
+      trail_obstacle: '🪨',
+      trail_erosion: '🕳️',
+      overgrown: '🌿',
+      missing_sign: '🪧',
+      other: '📍'
+    };
+
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('📋 Reports page initializing...');
+
+      // Initialize offline indicator
+      offlineIndicator.initialize();
+
+      // Initialize map
+      initializeMap();
+
+      // Setup auth listener
+      onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        updateAuthUI(user);
+        console.log('🔐 Auth state changed:', user ? `Signed in as ${user.email || 'Anonymous'}` : 'Signed out');
+        
+        // Initialize userService for gamification tracking
+        if (user) {
+          try {
+            await userService.initializeUser(user);
+            console.log('🏅 UserService initialized for gamification');
+          } catch (error) {
+            console.warn('⚠️ UserService initialization failed:', error);
+          }
+          
+          // Show loading indicator and refresh reports
+          console.log('🔄 Refreshing reports after sign-in...');
+          toast.show('Loading your reports...', 'info');
+          await loadReports();
+        } else {
+          // User signed out - refresh to show sign-in prompt
+          console.log('🔄 User signed out, refreshing content...');
+          await loadReports();
+        }
+      });
+
+      // Get user location (doesn't require auth)
+      await getUserLocation();
+
+      // Note: Reports will load automatically when auth state changes
+      // This handles the case where user is already signed in
+      // If not signed in, loadReports() will show the sign-in prompt
+      if (!currentUser) {
+        // Show sign-in prompt immediately if not authenticated
+        await loadReports();
+      }
+
+      // Setup event listeners
+      setupEventListeners();
+
+      // Hide loading overlay
+      document.getElementById('loadingOverlay').classList.add('hidden');
+
+      // Make utilities available for debugging
+      window.offlineIndicator = offlineIndicator;
+      window.loadingStates = loadingStates;
+      window.gamificationUI = gamificationUI;
+      window.accessibilityRating = accessibilityRating;
+      window.userService = userService;
+      window.showError = showError;
+      window.getErrorMessage = getErrorMessage;
+      
+      // Setup badge notification popups
+      gamificationUI.setupBadgeNotifications();
+
+      console.log('✅ Reports page initialized');
+    });
+
+    /**
+     * Initialize Leaflet map
+     */
+    function initializeMap() {
+      console.log('🗺️ Initializing map...');
+
+      map = L.map('reportMap').setView([-33.9249, 18.4241], 12); // Default: Cape Town
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Initialize marker cluster group
+      markerClusterGroup = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        iconCreateFunction: function(cluster) {
+          const count = cluster.getChildCount();
+          let size = 'small';
+          if (count > 10) size = 'large';
+          else if (count > 5) size = 'medium';
+
+          return L.divIcon({
+            html: `<div class="cluster-icon cluster-${size}">${count}</div>`,
+            className: 'marker-cluster-custom',
+            iconSize: L.point(40, 40)
+          });
+        }
+      });
+
+      // Add cluster styles dynamically
+      const style = document.createElement('style');
+      style.textContent = `
+        .marker-cluster-custom { background: transparent; }
+        .cluster-icon {
+          width: 40px; height: 40px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 700; color: white;
+          border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          background: #667eea;
+        }
+        .cluster-icon.cluster-medium { width: 50px; height: 50px; background: #f59e0b; }
+        .cluster-icon.cluster-large { width: 60px; height: 60px; background: #ef4444; }
+        
+        /* Report tooltip styles */
+        .report-tooltip {
+          background: white !important;
+          border: none !important;
+          border-radius: 8px !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+          padding: 0 !important;
+        }
+        .report-tooltip .leaflet-tooltip-content {
+          margin: 10px 12px !important;
+        }
+        .leaflet-tooltip-top:before {
+          border-top-color: white !important;
+        }
+      `;
+      document.head.appendChild(style);
+
+      map.addLayer(markerClusterGroup);
+      console.log('✅ Map initialized');
+    }
+
+    /**
+     * Get user's current location
+     */
+    async function getUserLocation() {
+      console.log('📍 Getting user location...');
+
+      if (!navigator.geolocation) {
+        console.warn('⚠️ Geolocation not supported');
+        document.getElementById('yourLocation').textContent = 'Not available';
+        return;
+      }
+
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+          });
+        });
+
+        currentLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+
+        console.log('✅ User location:', currentLocation);
+
+        // Center map on user location
+        map.setView([currentLocation.lat, currentLocation.lng], 13);
+
+        // Add user location marker
+        addUserLocationMarker();
+
+        // Get location name
+        await getLocationName(currentLocation.lat, currentLocation.lng);
+
+      } catch (error) {
+        console.error('❌ Error getting location:', error);
+        document.getElementById('yourLocation').textContent = 'Unknown';
+      }
+    }
+
+    /**
+     * Add marker for user's current location
+     */
+    function addUserLocationMarker() {
+      if (!currentLocation) return;
+
+      if (userLocationMarker) {
+        map.removeLayer(userLocationMarker);
+      }
+
+      const icon = L.divIcon({
+        html: `
+          <div style="width: 20px; height: 20px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" role="img" aria-label="Your current location"></div>
+        `,
+        className: 'user-location-marker',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      userLocationMarker = L.marker([currentLocation.lat, currentLocation.lng], { 
+        icon,
+        alt: 'Your current location',
+        keyboard: true
+      })
+        .addTo(map)
+        .bindPopup('📍 You are here');
+    }
+
+    /**
+     * Get location name from coordinates
+     * Uses OpenStreetMap Nominatim - CORS workaround using JSONP-style approach
+     */
+    async function getLocationName(lat, lng) {
+      try {
+        // Try using the Overpass/Nominatim API through a timeout approach
+        // If CORS fails, just show coordinates
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          {
+            signal: controller.signal,
+            mode: 'cors',
+            headers: {
+              'Accept': 'application/json'
+            }
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        const city = data.address?.city || data.address?.town || data.address?.village || data.address?.suburb || data.address?.county || 'Unknown';
+        document.getElementById('yourLocation').textContent = city;
+        console.log('📍 Location:', city);
+      } catch (error) {
+        console.warn('⚠️ Could not get location name:', error.message);
+        // Show coordinates as fallback - this is fine
+        document.getElementById('yourLocation').textContent = 'Cape Town Area';
+      }
+    }
+
+    /**
+     * Load reports from Firestore
+     * Note: Requires authentication per Firebase rules
+     */
+    async function loadReports() {
+      console.log('📥 Loading reports...');
+      const timeline = document.getElementById('reportTimeline');
+      timeline.innerHTML = '<div class="loading-spinner">Loading reports...</div>';
+
+      // Check if user is signed in - required by Firebase rules
+      if (!currentUser) {
+        console.log('⚠️ User not signed in, waiting for auth...');
+        timeline.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #6b7280;">
+            <p style="font-size: 1.25rem; margin-bottom: 16px;">🔐 Sign in to view reports</p>
+            <p style="margin-bottom: 16px;">Authentication is required to access accessibility reports.</p>
+            <button onclick="document.getElementById('authBtn').click()" class="btn btn-primary">Sign In with Google</button>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const reportsRef = collection(db, 'accessibilityReports');
+        const q = query(reportsRef, orderBy('createdAt', 'desc'), limit(100));
+        const snapshot = await getDocs(q);
+
+        allReports = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        console.log(`✅ Loaded ${allReports.length} reports`);
+        
+        // Debug: Log photo structure of first report with photos
+        const reportWithPhotos = allReports.find(r => r.photos && r.photos.length > 0);
+        if (reportWithPhotos) {
+          console.log('📷 Report with photos:', reportWithPhotos.title);
+          console.log('📷 Number of photos:', reportWithPhotos.photos.length);
+          console.log('📷 First photo object:', reportWithPhotos.photos[0]);
+          console.log('📷 First photo type:', typeof reportWithPhotos.photos[0]);
+          console.log('📷 First photo keys:', reportWithPhotos.photos[0] ? Object.keys(reportWithPhotos.photos[0]) : 'N/A');
+        }
+
+        if (allReports.length === 0) {
+          timeline.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+              <p style="font-size: 3rem; margin-bottom: 16px;">📋</p>
+              <p style="font-size: 1.25rem; margin-bottom: 8px;">No reports yet</p>
+              <p>Be the first to report an accessibility barrier!</p>
+            </div>
+          `;
+          updateStats();
+          return;
+        }
+
+        // Apply initial filter
+        filteredReports = allReports;
+        displayReports();
+        updateStats();
+
+      } catch (error) {
+        console.error('❌ Error loading reports:', error);
+        
+        let errorMessage = 'Failed to load reports.';
+        if (error.code === 'permission-denied') {
+          errorMessage = 'Permission denied. Please sign in to view reports.';
+        } else if (error.message?.includes('index')) {
+          errorMessage = 'Database index required. Please contact the administrator.';
+        }
+        
+        timeline.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #ef4444;">
+            <p style="font-size: 1.25rem; margin-bottom: 8px;">⚠️ ${errorMessage}</p>
+            <p style="color: #6b7280; font-size: 0.875rem;">${error.message}</p>
+            <button onclick="loadReports()" class="btn btn-secondary" style="margin-top: 16px;">Try Again</button>
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Display reports on map and timeline
+     */
+    function displayReports() {
+      // Clear existing markers
+      markerClusterGroup.clearLayers();
+
+      // Add markers
+      filteredReports.forEach(report => {
+        if (!report.latitude && !report.location?.latitude) return;
+
+        const lat = report.latitude || report.location?.latitude;
+        const lng = report.longitude || report.location?.longitude;
+        
+        if (!lat || !lng) return;
+
+        const marker = createReportMarker(report, lat, lng);
+        markerClusterGroup.addLayer(marker);
+      });
+
+      // Fit bounds if we have reports
+      if (filteredReports.length > 0) {
+        try {
+          const bounds = markerClusterGroup.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+          }
+        } catch (e) {
+          // Ignore bounds errors
+        }
+      }
+
+      // Update timeline
+      displayTimeline();
+
+      console.log(`✅ Displayed ${filteredReports.length} reports`);
+    }
+
+    /**
+     * Create marker for a report
+     */
+    function createReportMarker(report, lat, lng) {
+      const severity = report.severity || 3;
+      const color = severityColors[severity] || severityColors[3];
+      const label = severityLabels[severity] || 'Medium';
+      const icon = issueIcons[report.issueType] || '📍';
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : '';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+
+      // Add pulsing border for temporary issues
+      const markerStyle = isTemporary 
+        ? `width: 36px; height: 36px; background: ${color}; border: 3px dashed #3b82f6; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; animation: tempPulse 2s infinite;`
+        : `width: 36px; height: 36px; background: ${color}; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px;`;
+
+      const divIcon = L.divIcon({
+        html: `<div style="${markerStyle}" role="img" aria-label="Accessibility report: ${escapeHtml(report.title)}">${icon}</div>`,
+        className: 'report-marker' + (isTemporary ? ' temporary' : ''),
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+
+      const marker = L.marker([lat, lng], { 
+        icon: divIcon,
+        alt: `Accessibility report: ${escapeHtml(report.title)}`,
+        keyboard: true
+      });
+
+      // Add tooltip for hover preview
+      const tempBadge = isTemporary ? '<span style="background: #3b82f6; color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-left: 4px;">⏳ TEMP</span>' : '';
+      const tooltipContent = `
+        <div style="min-width: 180px; max-width: 250px;">
+          <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">${escapeHtml(report.title)}${tempBadge}</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">${escapeHtml((report.description || '').substring(0, 80))}${(report.description || '').length > 80 ? '...' : ''}</div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #9ca3af;">
+            <span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px;">${label}</span>
+            <span>${date}</span>
+          </div>
+        </div>
+      `;
+      marker.bindTooltip(tooltipContent, {
+        direction: 'top',
+        offset: [0, -20],
+        opacity: 0.95,
+        className: 'report-tooltip'
+      });
+
+      // Create popup for click
+      const popupContent = `
+        <div style="min-width: 220px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${escapeHtml(report.title)}</h3>
+          <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280;">${escapeHtml((report.description || '').substring(0, 100))}${(report.description || '').length > 100 ? '...' : ''}</p>
+          <div style="display: flex; gap: 8px;">
+            <button onclick="window.viewReportDetails('${report.id}')" style="flex: 1; padding: 8px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">View Details</button>
+            <button onclick="window.navigateToLocation(${lat}, ${lng})" style="padding: 8px 12px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;" title="Navigate">🧭</button>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      return marker;
+    }
+
+    /**
+     * Display timeline of reports
+     */
+    function displayTimeline() {
+      const timeline = document.getElementById('reportTimeline');
+
+      if (filteredReports.length === 0) {
+        timeline.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No reports found matching your filters.</p>';
+        return;
+      }
+
+      timeline.innerHTML = filteredReports.slice(0, 20).map(report => {
+        const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : 'Unknown date';
+        const severity = report.severity || 3;
+        const severityLabel = severityLabels[severity] || 'Medium';
+        const severityClass = typeof severity === 'number' ? 
+          (severity <= 1 ? 'low' : severity <= 2 ? 'low' : severity <= 3 ? 'medium' : severity <= 4 ? 'high' : 'critical') :
+          severity;
+        const lat = report.latitude || report.location?.latitude;
+        const lng = report.longitude || report.location?.longitude;
+        const location = report.address || report.location?.placeDescription || (lat && lng ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Unknown location');
+        const isTemporary = report.isTemporary || report.durationType === 'temporary';
+        const temporaryBadge = isTemporary ? '<span style="background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 6px;">⏳ TEMP</span>' : '';
+        const isVerified = (report.verificationCount || 0) >= 3;
+        const verifiedBadge = isVerified ? '<span style="background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 6px;">✓ VERIFIED</span>' : '';
+
+        return `
+          <div class="report-card severity-${severityClass}" onclick="window.viewReportDetails('${report.id}')">
+            <div class="report-card-header">
+              <h3 class="report-card-title">${escapeHtml(report.title)}${temporaryBadge}${verifiedBadge}</h3>
+              <span class="report-card-date">${date}</span>
+            </div>
+            <p class="report-card-description">${escapeHtml((report.description || '').substring(0, 150))}${(report.description || '').length > 150 ? '...' : ''}</p>
+            <div class="report-card-meta">
+              <span>📍 ${escapeHtml(location)}</span>
+              <span>⚠️ ${severityLabel}</span>
+              <span>👍 ${report.upvotes || 0}</span>
+              ${(report.verificationCount || 0) > 0 ? `<span>✓ ${report.verificationCount}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * Update statistics
+     */
+    function updateStats() {
+      document.getElementById('totalReports').textContent = allReports.length;
+      document.getElementById('newReports').textContent = allReports.filter(r => r.status === 'new').length;
+      document.getElementById('resolvedReports').textContent = allReports.filter(r => r.status === 'resolved').length;
+    }
+
+    /**
+     * View report details
+     */
+    window.viewReportDetails = async function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        console.error('Report not found:', reportId);
+        return;
+      }
+
+      const modal = document.getElementById('reportDetailModal');
+      const modalBody = document.getElementById('modalBody');
+      document.getElementById('modalTitle').textContent = report.title;
+
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown date';
+      const lat = report.latitude || report.location?.latitude;
+      const lng = report.longitude || report.location?.longitude;
+      const location = report.address || report.location?.placeDescription || (lat && lng ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'Unknown location');
+      const severity = report.severity || 3;
+      const severityColor = severityColors[severity] || severityColors[3];
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+      const expectedResolution = report.expectedResolution?.toDate ? report.expectedResolution.toDate().toLocaleDateString() : null;
+
+      // Status workflow configuration
+      const statusConfig = {
+        new: { label: 'New', icon: '🆕', color: '#6b7280', bgColor: '#f3f4f6', nextStatus: 'acknowledged' },
+        acknowledged: { label: 'Acknowledged', icon: '👀', color: '#0369a1', bgColor: '#e0f2fe', nextStatus: 'in_progress' },
+        in_progress: { label: 'In Progress', icon: '🔧', color: '#d97706', bgColor: '#fef3c7', nextStatus: 'resolved' },
+        resolved: { label: 'Resolved', icon: '✅', color: '#059669', bgColor: '#d1fae5', nextStatus: null },
+        closed: { label: 'Closed', icon: '📁', color: '#374151', bgColor: '#e5e7eb', nextStatus: null }
+      };
+      
+      const currentStatus = report.status || 'new';
+      const statusInfo = statusConfig[currentStatus] || statusConfig.new;
+      const isOwner = currentUser && currentUser.uid === report.userId;
+      const statusHistory = report.statusHistory || [];
+
+      modalBody.innerHTML = `
+        <!-- Status Workflow Section -->
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; background: ${statusInfo.bgColor}; color: ${statusInfo.color};">
+              ${statusInfo.icon} ${statusInfo.label}
+            </span>
+            <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: ${severityColor}; color: white;">${severityLabel}</span>
+            ${isTemporary ? '<span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #3b82f6; color: white;">⏳ TEMPORARY</span>' : ''}
+          </div>
+          
+          <!-- Status Progress Bar -->
+          <div style="margin-top: 12px; display: flex; align-items: center; gap: 4px;">
+            ${Object.entries(statusConfig).slice(0, 4).map(([key, config], index) => {
+              const isActive = key === currentStatus;
+              const isPast = ['new', 'acknowledged', 'in_progress', 'resolved'].indexOf(key) < ['new', 'acknowledged', 'in_progress', 'resolved'].indexOf(currentStatus);
+              const dotColor = isActive ? config.color : isPast ? '#10b981' : '#d1d5db';
+              const lineColor = isPast ? '#10b981' : '#d1d5db';
+              return `
+                <div style="display: flex; align-items: center; flex: 1;">
+                  <div style="width: 24px; height: 24px; border-radius: 50%; background: ${dotColor}; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white;" title="${config.label}">
+                    ${isPast ? '✓' : (index + 1)}
+                  </div>
+                  ${index < 3 ? `<div style="flex: 1; height: 3px; background: ${lineColor};"></div>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: #9ca3af;">
+            <span>New</span>
+            <span>Acknowledged</span>
+            <span>In Progress</span>
+            <span>Resolved</span>
+          </div>
+        </div>
+        
+        ${isTemporary && expectedResolution ? `
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;">
+            <strong>📅 Expected Resolution:</strong> ${expectedResolution}
+          </div>
+        ` : ''}
+        <p style="color: #6b7280; margin-bottom: 16px;">${escapeHtml(report.description || 'No description provided')}</p>
+        <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>📍 Location:</strong> ${escapeHtml(location)}</p>
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>📅 Reported:</strong> ${date}</p>
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>🕐 Type:</strong> ${isTemporary ? 'Temporary (construction, seasonal, etc.)' : 'Permanent (structural issue)'}</p>
+          <p style="margin: 0; font-size: 14px;"><strong>👤 Reporter:</strong> ${escapeHtml(report.userName || report.userEmail || 'Anonymous')}</p>
+        </div>
+        
+        ${report.municipalTrackingId ? `
+        <!-- Municipal Tracking Info -->
+        <div style="background: #ede9fe; border: 1px solid #c4b5fd; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; color: #5b21b6; display: flex; align-items: center; gap: 6px;">
+            <span>🏛️</span> Municipal Tracking
+          </h4>
+          <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>Reference ID:</strong> <span style="font-family: monospace; background: #f5f3ff; padding: 2px 6px; border-radius: 4px;">${escapeHtml(report.municipalTrackingId)}</span></p>
+          ${report.scheduledRepairDate ? `<p style="margin: 4px 0 0 0; font-size: 14px;"><strong>Scheduled:</strong> ${new Date(report.scheduledRepairDate).toLocaleDateString()}</p>` : ''}
+          ${report.resolvedAt ? `<p style="margin: 4px 0 0 0; font-size: 14px;"><strong>Resolved:</strong> ${report.resolvedAt.toDate ? report.resolvedAt.toDate().toLocaleDateString() : new Date(report.resolvedAt).toLocaleDateString()}</p>` : ''}
+        </div>
+        ` : ''}
+        
+        <!-- Status History (if exists) -->
+        ${statusHistory.length > 0 ? `
+          <div style="margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+              <span>📋</span> Status History
+            </h4>
+            <div style="background: #f9fafb; border-radius: 8px; padding: 12px;">
+              ${statusHistory.slice(-5).reverse().map(entry => {
+                const entryDate = entry.timestamp?.toDate ? entry.timestamp.toDate().toLocaleString() : 'Unknown';
+                const entryStatus = statusConfig[entry.status] || statusConfig.new;
+                return `
+                  <div style="display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="font-size: 1rem;">${entryStatus.icon}</span>
+                    <div style="flex: 1;">
+                      <div style="font-weight: 600; font-size: 0.85rem;">${entryStatus.label}</div>
+                      ${entry.note ? `<div style="font-size: 0.8rem; color: #6b7280; margin-top: 2px;">${escapeHtml(entry.note)}</div>` : ''}
+                      <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 2px;">${entryDate}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        <!-- Status Update (for report owner) -->
+        ${isOwner && statusInfo.nextStatus ? `
+          <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 0.9rem;">🔄 Update Status</h4>
+            <p style="font-size: 0.85rem; color: #92400e; margin-bottom: 12px;">As the report owner, you can update the status when there's progress.</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button onclick="window.updateReportStatus('${report.id}', '${statusInfo.nextStatus}')" class="btn btn-primary" style="font-size: 0.85rem; padding: 8px 16px;">
+                ${statusConfig[statusInfo.nextStatus].icon} Mark as ${statusConfig[statusInfo.nextStatus].label}
+              </button>
+              <button onclick="window.showStatusUpdateModal('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 16px;">
+                ✏️ Add Note
+              </button>
+            </div>
+          </div>
+        ` : ''}
+        
+        ${report.photos && report.photos.length > 0 ? (() => {
+          // Extract all photo URLs for the gallery
+          const photoUrls = report.photos.map(photo => {
+            if (typeof photo === 'string') return photo;
+            if (photo.content) return photo.content;
+            if (photo.data && typeof photo.data === 'string') return photo.data;
+            if (photo.url) return photo.url;
+            return null;
+          }).filter(url => url);
+          
+          // Store photos in registry (will be done when modal opens)
+          window.photoRegistry = window.photoRegistry || {};
+          window.photoRegistry[report.id] = photoUrls;
+          
+          return `
+            <div style="margin-bottom: 16px;">
+              <h4 style="margin-bottom: 8px;">📷 Photos (${photoUrls.length})</h4>
+              <div class="photo-grid" data-report-id="${report.id}" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;">
+                ${photoUrls.map((photoUrl, index) => `
+                  <img src="${photoUrl}" 
+                       alt="Photo ${index + 1}" 
+                       data-index="${index}"
+                       data-report-id="${report.id}"
+                       style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; cursor: pointer; background: #f3f4f6;" 
+                       onclick="window.openGallery('${report.id}', ${index})">
+                `).join('')}
+              </div>
+            </div>
+          `;
+        })() : ''}
+        
+        <!-- Verification Section -->
+        <div style="background: ${(report.verificationCount || 0) >= 3 ? '#ecfdf5' : '#f9fafb'}; border: 1px solid ${(report.verificationCount || 0) >= 3 ? '#a7f3d0' : '#e5e7eb'}; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span style="font-weight: 600; color: #374151;">
+                ${(report.verificationCount || 0) >= 3 ? '✅ Community Verified' : '🔍 Community Verification'}
+              </span>
+              <span style="font-size: 0.85rem; color: #6b7280; margin-left: 8px;">
+                ${report.verificationCount || 0} ${(report.verificationCount || 0) === 1 ? 'user has' : 'users have'} verified this report
+              </span>
+            </div>
+            <button onclick="window.verifyReport('${report.id}')" 
+                    class="btn btn-secondary" 
+                    style="font-size: 0.85rem; padding: 6px 12px;"
+                    ${(report.verifiedBy || []).includes(currentUser?.uid) ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}
+                    ${report.userId === currentUser?.uid ? 'disabled title="Cannot verify your own report" style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+              ${(report.verifiedBy || []).includes(currentUser?.uid) ? '✓ Verified' : '✓ Verify Accuracy'}
+            </button>
+          </div>
+          ${(report.verificationCount || 0) < 3 ? `
+            <p style="font-size: 0.75rem; color: #9ca3af; margin: 8px 0 0 0;">
+              Help confirm this report is accurate. Reports verified by 3+ users get a "Community Verified" badge.
+            </p>
+          ` : ''}
+        </div>
+        
+        <div style="display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap;">
+          <button onclick="window.upvoteReport('${report.id}')" class="btn btn-secondary" style="flex: 1; min-width: 120px;">👍 Upvote (${report.upvotes || 0})</button>
+          ${lat && lng ? `
+            <button onclick="window.zoomToReport(${lat}, ${lng})" class="btn btn-primary" style="flex: 1; min-width: 120px;">📍 Show on Map</button>
+            <button onclick="window.navigateToLocation(${lat}, ${lng})" class="btn" style="flex: 1; min-width: 120px; background: #10b981; color: white;">🧭 Navigate</button>
+          ` : ''}
+        </div>
+        
+        <!-- 311 Export Options -->
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+          <h4 style="margin: 0 0 12px 0; font-size: 0.9rem; color: #374151;">📋 Submit to Authorities</h4>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="window.printReport('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              🖨️ Print Report
+            </button>
+            <button onclick="window.downloadReport('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              📥 Download PDF
+            </button>
+            <button onclick="window.export311Email('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              ✉️ Email Template
+            </button>
+            <button onclick="window.export311Text('${report.id}')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px;">
+              📄 Copy Text
+            </button>
+          </div>
+          <p style="font-size: 0.75rem; color: #9ca3af; margin: 8px 0 0 0;">
+            Print or download this report to submit to your local 311 service or accessibility office.
+          </p>
+        </div>
+      `;
+
+      modal.classList.remove('hidden');
+    };
+
+    /**
+     * Upvote a report
+     */
+    window.upvoteReport = async function(reportId) {
+      if (!currentUser) {
+        alert('Please sign in to upvote reports');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        const reportDoc = await getDoc(reportRef);
+        
+        if (!reportDoc.exists()) {
+          console.error('Report not found');
+          return;
+        }
+
+        const report = reportDoc.data();
+        const upvotedBy = report.upvotedBy || [];
+
+        if (upvotedBy.includes(currentUser.uid)) {
+          // Remove upvote
+          await updateDoc(reportRef, {
+            upvotes: increment(-1),
+            upvotedBy: arrayRemove(currentUser.uid)
+          });
+        } else {
+          // Add upvote
+          await updateDoc(reportRef, {
+            upvotes: increment(1),
+            upvotedBy: arrayUnion(currentUser.uid)
+          });
+        }
+
+        // Reload reports
+        await loadReports();
+        
+        // Close and reopen modal if open
+        const modal = document.getElementById('reportDetailModal');
+        if (!modal.classList.contains('hidden')) {
+          window.viewReportDetails(reportId);
+        }
+
+      } catch (error) {
+        console.error('Error upvoting:', error);
+        alert('Failed to upvote. Please try again.');
+      }
+    };
+
+    /**
+     * Verify a report (crowd validation)
+     */
+    window.verifyReport = async function(reportId) {
+      if (!currentUser) {
+        alert('Please sign in to verify reports');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        const reportDoc = await getDoc(reportRef);
+        
+        if (!reportDoc.exists()) {
+          console.error('Report not found');
+          return;
+        }
+
+        const report = reportDoc.data();
+        
+        // Prevent self-verification
+        if (report.userId === currentUser.uid) {
+          alert('You cannot verify your own report');
+          return;
+        }
+        
+        const verifiedBy = report.verifiedBy || [];
+
+        if (verifiedBy.includes(currentUser.uid)) {
+          // Already verified - can't undo verification
+          alert('You have already verified this report');
+          return;
+        }
+        
+        // Add verification
+        await updateDoc(reportRef, {
+          verificationCount: increment(1),
+          verifiedBy: arrayUnion(currentUser.uid),
+          lastVerifiedAt: serverTimestamp()
+        });
+        
+        // Award points for verifying
+        if (typeof userService !== 'undefined' && userService.isInitialized) {
+          try {
+            await userService.addPoints(5, 'Verified an accessibility report');
+            showToast('✓ Report verified! +5 points', 'success');
+          } catch (e) {
+            showToast('✓ Report verified!', 'success');
+          }
+        } else {
+          showToast('✓ Report verified! Thank you for helping confirm accessibility information.', 'success');
+        }
+
+        // Reload reports
+        await loadReports();
+        
+        // Close and reopen modal if open
+        const modal = document.getElementById('reportDetailModal');
+        if (!modal.classList.contains('hidden')) {
+          window.viewReportDetails(reportId);
+        }
+
+      } catch (error) {
+        console.error('Error verifying:', error);
+        alert('Failed to verify. Please try again.');
+      }
+    };
+
+    // Photo registry for gallery view
+    window.photoRegistry = {};
+    
+    /**
+     * Open gallery from registry
+     */
+    window.openGallery = function(reportId, startIndex) {
+      const photos = window.photoRegistry[reportId];
+      if (photos && photos.length > 0) {
+        window.openPhotoLightbox(photos[startIndex], photos);
+      }
+    };
+
+    /**
+     * Open photo gallery lightbox
+     * Shows all photos from the current report with navigation
+     */
+    window.openPhotoLightbox = function(clickedSrc, allPhotos = null) {
+      // If we have the photos array, use it; otherwise just show single photo
+      const photos = allPhotos || [clickedSrc];
+      let currentIndex = 0;
+      
+      // Find the clicked photo index
+      if (allPhotos) {
+        currentIndex = allPhotos.findIndex(p => p === clickedSrc);
+        if (currentIndex === -1) currentIndex = 0;
+      }
+      
+      // Create lightbox overlay
+      const lightbox = document.createElement('div');
+      lightbox.id = 'photoLightbox';
+      lightbox.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+      `;
+      
+      lightbox.innerHTML = `
+        <button id="lightboxClose" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 24px; cursor: pointer; color: white; transition: background 0.2s;">×</button>
+        
+        <div id="lightboxCounter" style="position: absolute; top: 24px; left: 50%; transform: translateX(-50%); color: white; font-size: 14px; font-weight: 600; background: rgba(0,0,0,0.5); padding: 6px 16px; border-radius: 20px;">
+          ${currentIndex + 1} / ${photos.length}
+        </div>
+        
+        ${photos.length > 1 ? `
+          <button id="lightboxPrev" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; color: white; transition: background 0.2s;">‹</button>
+          <button id="lightboxNext" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; color: white; transition: background 0.2s;">›</button>
+        ` : ''}
+        
+        <div id="lightboxMain" style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; padding: 60px 80px; box-sizing: border-box;">
+          <img id="lightboxImage" src="${photos[currentIndex]}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; transition: opacity 0.2s;">
+        </div>
+        
+        ${photos.length > 1 ? `
+          <div id="lightboxThumbnails" style="display: flex; gap: 8px; padding: 16px; overflow-x: auto; max-width: 100%; background: rgba(0,0,0,0.5);">
+            ${photos.map((photo, i) => `
+              <img src="${photo}" data-index="${i}" class="lightbox-thumb" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; opacity: ${i === currentIndex ? '1' : '0.5'}; border: 2px solid ${i === currentIndex ? 'white' : 'transparent'}; transition: all 0.2s; flex-shrink: 0;">
+            `).join('')}
+          </div>
+        ` : ''}
+      `;
+      
+      document.body.appendChild(lightbox);
+      document.body.style.overflow = 'hidden';
+      
+      const mainImage = document.getElementById('lightboxImage');
+      const counter = document.getElementById('lightboxCounter');
+      const thumbnails = document.querySelectorAll('.lightbox-thumb');
+      
+      // Update display function
+      function showPhoto(index) {
+        if (index < 0) index = photos.length - 1;
+        if (index >= photos.length) index = 0;
+        currentIndex = index;
+        
+        mainImage.style.opacity = '0.5';
+        setTimeout(() => {
+          mainImage.src = photos[currentIndex];
+          mainImage.style.opacity = '1';
+        }, 100);
+        
+        counter.textContent = `${currentIndex + 1} / ${photos.length}`;
+        
+        thumbnails.forEach((thumb, i) => {
+          thumb.style.opacity = i === currentIndex ? '1' : '0.5';
+          thumb.style.border = i === currentIndex ? '2px solid white' : '2px solid transparent';
+        });
+      }
+      
+      // Navigation
+      document.getElementById('lightboxPrev')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPhoto(currentIndex - 1);
+      });
+      
+      document.getElementById('lightboxNext')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPhoto(currentIndex + 1);
+      });
+      
+      // Thumbnail clicks
+      thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showPhoto(parseInt(thumb.dataset.index));
+        });
+      });
+      
+      // Close button
+      document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+      
+      // Click outside to close
+      document.getElementById('lightboxMain').addEventListener('click', (e) => {
+        if (e.target.id === 'lightboxMain') closeLightbox();
+      });
+      
+      // Keyboard navigation
+      function handleKeydown(e) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') showPhoto(currentIndex - 1);
+        if (e.key === 'ArrowRight') showPhoto(currentIndex + 1);
+      }
+      document.addEventListener('keydown', handleKeydown);
+      
+      // Touch swipe support
+      let touchStartX = 0;
+      lightbox.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      });
+      lightbox.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) showPhoto(currentIndex + 1);
+          else showPhoto(currentIndex - 1);
+        }
+      });
+      
+      function closeLightbox() {
+        document.removeEventListener('keydown', handleKeydown);
+        document.body.style.overflow = '';
+        lightbox.remove();
+      }
+    };
+    
+    // Store current report photos for gallery view
+    let currentReportPhotos = [];
+
+    /**
+     * Zoom to report on map
+     */
+    window.zoomToReport = function(lat, lng) {
+      document.getElementById('reportDetailModal').classList.add('hidden');
+      map.setView([lat, lng], 16);
+    };
+
+    // ==========================================
+    // CREATE REPORT MODAL FUNCTIONS
+    // ==========================================
+    
+    let locationPickerMap = null;
+    let locationPickerMarker = null;
+    let pendingPhotos = [];
+
+    /**
+     * Open the create report modal
+     */
+    function openReportCreateModal() {
+      const modal = document.getElementById('createReportModal');
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      
+      // Initialize the location picker map
+      setTimeout(() => {
+        initLocationPickerMap();
+      }, 100);
+      
+      // Reset form
+      document.getElementById('createReportForm').reset();
+      document.getElementById('photoPreviewGrid').innerHTML = '';
+      pendingPhotos = [];
+      
+      // Set current location if available
+      if (currentLocation) {
+        setReportLocation(currentLocation.lat, currentLocation.lng);
+      }
+    }
+
+    /**
+     * Close the create report modal
+     */
+    window.closeCreateReportModal = function() {
+      const modal = document.getElementById('createReportModal');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+      
+      // Clean up the location picker map
+      if (locationPickerMap) {
+        locationPickerMap.remove();
+        locationPickerMap = null;
+        locationPickerMarker = null;
+      }
+    };
+
+    /**
+     * Initialize the location picker map
+     */
+    function initLocationPickerMap() {
+      const container = document.getElementById('locationPickerMap');
+      if (!container) return;
+      
+      // Clear any existing map
+      if (locationPickerMap) {
+        locationPickerMap.remove();
+      }
+      
+      // Create mini map
+      const startLat = currentLocation?.lat || -33.9249;
+      const startLng = currentLocation?.lng || 18.4241;
+      
+      locationPickerMap = L.map('locationPickerMap').setView([startLat, startLng], 14);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OSM',
+        maxZoom: 19
+      }).addTo(locationPickerMap);
+      
+      // Add click handler to select location
+      locationPickerMap.on('click', (e) => {
+        setReportLocation(e.latlng.lat, e.latlng.lng);
+      });
+      
+      // If we have current location, add marker
+      if (currentLocation) {
+        setReportLocation(currentLocation.lat, currentLocation.lng);
+      }
+    }
+
+    /**
+     * Set the report location
+     */
+    function setReportLocation(lat, lng) {
+      document.getElementById('reportLat').value = lat;
+      document.getElementById('reportLng').value = lng;
+      document.getElementById('selectedLocationText').textContent = `Selected: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      
+      // Update or create marker
+      if (locationPickerMap) {
+        if (locationPickerMarker) {
+          locationPickerMarker.setLatLng([lat, lng]);
+        } else {
+          locationPickerMarker = L.marker([lat, lng], {
+            icon: L.divIcon({
+              html: '<div style="width: 24px; height: 24px; background: #ef4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" role="img" aria-label="Selected report location"></div>',
+              className: 'location-marker',
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            }),
+            alt: 'Selected report location',
+            keyboard: true
+          }).addTo(locationPickerMap);
+        }
+        locationPickerMap.setView([lat, lng], 16);
+      }
+    }
+
+    /**
+     * Compress image to base64
+     */
+    function compressImage(file, maxWidth = 1200, quality = 0.7) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const base64 = canvas.toDataURL('image/jpeg', quality);
+            resolve({
+              content: base64,
+              originalName: file.name,
+              originalSize: file.size,
+              compressedSize: base64.length,
+              uploadedAt: Date.now()
+            });
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /**
+     * Handle photo selection
+     */
+    async function handlePhotoSelection(files) {
+      const previewGrid = document.getElementById('photoPreviewGrid');
+      
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        
+        try {
+          const compressed = await compressImage(file);
+          pendingPhotos.push(compressed);
+          
+          // Add preview
+          const preview = document.createElement('div');
+          preview.style.cssText = 'position: relative;';
+          preview.innerHTML = `
+            <img src="${compressed.content}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 8px;">
+            <button type="button" onclick="removePhoto(${pendingPhotos.length - 1})" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #ef4444; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 14px;">×</button>
+          `;
+          previewGrid.appendChild(preview);
+        } catch (error) {
+          console.error('Error processing photo:', error);
+        }
+      }
+    }
+
+    /**
+     * Remove a pending photo
+     */
+    window.removePhoto = function(index) {
+      pendingPhotos.splice(index, 1);
+      // Rebuild preview grid
+      const previewGrid = document.getElementById('photoPreviewGrid');
+      previewGrid.innerHTML = '';
+      pendingPhotos.forEach((photo, i) => {
+        const preview = document.createElement('div');
+        preview.style.cssText = 'position: relative;';
+        preview.innerHTML = `
+          <img src="${photo.content}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 8px;">
+          <button type="button" onclick="removePhoto(${i})" style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #ef4444; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 14px;">×</button>
+        `;
+        previewGrid.appendChild(preview);
+      });
+    };
+
+    /**
+     * Submit the report
+     */
+    async function submitReport(e) {
+      e.preventDefault();
+      
+      const lat = document.getElementById('reportLat').value;
+      const lng = document.getElementById('reportLng').value;
+      
+      if (!lat || !lng) {
+        alert('Please select a location on the map');
+        return;
+      }
+      
+      const issueType = document.getElementById('reportIssueType').value;
+      if (!issueType) {
+        alert('Please select an issue type');
+        return;
+      }
+      
+      const title = document.getElementById('reportTitle').value.trim();
+      if (!title) {
+        alert('Please enter a title');
+        return;
+      }
+      
+      const severity = parseInt(document.querySelector('input[name="reportSeverity"]:checked')?.value) || 3;
+      const description = document.getElementById('reportDescription').value.trim();
+      const address = document.getElementById('reportAddress').value.trim();
+      
+      // Get duration type and expected resolution
+      const durationType = document.querySelector('input[name="durationType"]:checked')?.value || 'permanent';
+      const expectedResolution = document.getElementById('expectedResolution')?.value || null;
+      
+      // Disable submit button
+      const submitBtn = document.getElementById('submitReportBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Submitting...';
+      
+      try {
+        const reportData = {
+          latitude: parseFloat(lat),
+          longitude: parseFloat(lng),
+          issueType,
+          severity,
+          title,
+          description,
+          address: address || null,
+          photos: pendingPhotos,
+          isPublic: true,
+          status: 'new',
+          upvotes: 0,
+          upvotedBy: [],
+          // Duration info
+          durationType,
+          isTemporary: durationType === 'temporary',
+          expectedResolution: expectedResolution ? new Date(expectedResolution) : null,
+          // User info
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        
+        // Save to Firestore
+        const reportsRef = collection(db, 'accessibilityReports');
+        const docRef = await addDoc(reportsRef, reportData);
+        
+        console.log('✅ Report created:', docRef.id);
+        
+        // Close modal
+        closeCreateReportModal();
+        
+        // Show success message
+        showToast('Report submitted successfully!', 'success');
+        
+        // Track report for gamification (awards badges & points)
+        if (userService.isInitialized) {
+          try {
+            await userService.trackReportSubmitted();
+          } catch (trackError) {
+            console.warn('⚠️ Failed to track report for gamification:', trackError);
+          }
+        }
+        
+        // Reload reports
+        await loadReports();
+        
+      } catch (error) {
+        console.error('❌ Error creating report:', error);
+        alert('Failed to submit report: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📤 Submit Report';
+      }
+    }
+
+    /**
+     * Show toast notification
+     */
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        z-index: 999999;
+        animation: slideUp 0.3s ease-out;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.animation = 'slideDown 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Add toast animations
+    const toastStyle = document.createElement('style');
+    toastStyle.textContent = `
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      @keyframes slideDown {
+        from { opacity: 1; transform: translateX(-50%) translateY(0); }
+        to { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      }
+    `;
+    document.head.appendChild(toastStyle);
+
+    /**
+     * Setup event listeners
+     */
+    function setupEventListeners() {
+      // Apply filters
+      document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
+
+      // Reset filters
+      document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+
+      // Export filtered reports to CSV
+      document.getElementById('exportAllBtn').addEventListener('click', exportFilteredReportsCSV);
+
+      // Print all filtered reports
+      document.getElementById('printAllBtn').addEventListener('click', printAllFilteredReports);
+
+      // Use my location
+      document.getElementById('useMyLocationBtn').addEventListener('click', async () => {
+        await getUserLocation();
+        if (currentLocation) {
+          filterByProximity(currentLocation, 50);
+        }
+      });
+
+      // Center map
+      document.getElementById('centerMapBtn').addEventListener('click', () => {
+        if (currentLocation) {
+          map.setView([currentLocation.lat, currentLocation.lng], 13);
+        }
+      });
+
+      // Fullscreen toggle
+      document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+
+      // Report FAB - open create modal
+      document.getElementById('reportFabBtn').addEventListener('click', () => {
+        if (!currentUser) {
+          alert('Please sign in to report an accessibility issue');
+          return;
+        }
+        openReportCreateModal();
+      });
+
+      // Create report modal events
+      document.getElementById('closeCreateModalBtn').addEventListener('click', closeCreateReportModal);
+      
+      document.getElementById('createReportModal').addEventListener('click', (e) => {
+        if (e.target.id === 'createReportModal') {
+          closeCreateReportModal();
+        }
+      });
+      
+      document.getElementById('useCurrentLocationBtn').addEventListener('click', async () => {
+        if (currentLocation) {
+          setReportLocation(currentLocation.lat, currentLocation.lng);
+        } else {
+          await getUserLocation();
+          if (currentLocation) {
+            setReportLocation(currentLocation.lat, currentLocation.lng);
+          }
+        }
+      });
+      
+      document.getElementById('addPhotosBtn').addEventListener('click', () => {
+        // Show options for take photo or upload
+        const photoOptions = document.createElement('div');
+        photoOptions.id = 'photoOptionsMenu';
+        photoOptions.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100001;';
+        photoOptions.innerHTML = `
+          <div style="background: white; border-radius: 16px; padding: 24px; max-width: 320px; width: 90%; text-align: center;">
+            <h3 style="margin: 0 0 20px 0;">📸 Add Photo</h3>
+            <button id="takePhotoOption" style="width: 100%; padding: 14px; margin-bottom: 12px; background: linear-gradient(135deg, #2c5530, #4a7c59); color: white; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              📷 Take Photo
+            </button>
+            <button id="uploadPhotoOption" style="width: 100%; padding: 14px; margin-bottom: 12px; background: #f3f4f6; color: #333; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              📁 Upload from Device
+            </button>
+            <button id="cancelPhotoOption" style="width: 100%; padding: 12px; background: transparent; color: #6b7280; border: none; font-size: 0.9rem; cursor: pointer;">
+              Cancel
+            </button>
+          </div>
+        `;
+        document.body.appendChild(photoOptions);
+        
+        // Take photo option - use camera
+        document.getElementById('takePhotoOption').addEventListener('click', () => {
+          photoOptions.remove();
+          // Create a temporary input with capture attribute
+          const cameraInput = document.createElement('input');
+          cameraInput.type = 'file';
+          cameraInput.accept = 'image/*';
+          cameraInput.capture = 'environment'; // Use back camera
+          cameraInput.style.display = 'none';
+          cameraInput.addEventListener('change', (e) => {
+            handlePhotoSelection(e.target.files);
+            cameraInput.remove();
+          });
+          document.body.appendChild(cameraInput);
+          cameraInput.click();
+        });
+        
+        // Upload option - use regular file picker
+        document.getElementById('uploadPhotoOption').addEventListener('click', () => {
+          photoOptions.remove();
+          document.getElementById('reportPhotos').click();
+        });
+        
+        // Cancel
+        document.getElementById('cancelPhotoOption').addEventListener('click', () => {
+          photoOptions.remove();
+        });
+        
+        // Close on backdrop click
+        photoOptions.addEventListener('click', (e) => {
+          if (e.target === photoOptions) {
+            photoOptions.remove();
+          }
+        });
+      });
+      
+      document.getElementById('reportPhotos').addEventListener('change', (e) => {
+        handlePhotoSelection(e.target.files);
+      });
+      
+      document.getElementById('createReportForm').addEventListener('submit', submitReport);
+
+      // Modal close
+      document.getElementById('closeModalBtn').addEventListener('click', () => {
+        document.getElementById('reportDetailModal').classList.add('hidden');
+      });
+
+      // Close modal on backdrop click
+      document.getElementById('reportDetailModal').addEventListener('click', (e) => {
+        if (e.target.id === 'reportDetailModal') {
+          document.getElementById('reportDetailModal').classList.add('hidden');
+        }
+      });
+
+      // Close modal on Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.getElementById('reportDetailModal').classList.add('hidden');
+        }
+      });
+
+      // Auth button
+      const navAuthBtn = document.getElementById('navAuthBtn');
+      if (navAuthBtn) {
+        navAuthBtn.addEventListener('click', async () => {
+          if (currentUser) {
+            if (confirm('Sign out of Accessible?')) {
+              await signOut(auth);
+            }
+          } else {
+            // Open auth modal
+            openAuthModal();
+          }
+        });
+      }
+    }
+
+    /**
+     * Update auth UI
+     */
+    function updateAuthUI(user) {
+      const navAuthBtn = document.getElementById('navAuthBtn');
+      const indicator = document.getElementById('navAuthIndicator');
+      const statusText = document.getElementById('navAuthStatusText');
+      const profileNavLink = document.getElementById('profileNavLink');
+      
+      if (user) {
+        if (navAuthBtn) navAuthBtn.textContent = 'Sign Out';
+        if (indicator) indicator.classList.add('signed-in');
+        if (statusText) statusText.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+        if (profileNavLink) profileNavLink.style.display = 'block';
+      } else {
+        if (navAuthBtn) navAuthBtn.textContent = 'Sign In';
+        if (indicator) indicator.classList.remove('signed-in');
+        if (statusText) statusText.textContent = 'Guest';
+        if (profileNavLink) profileNavLink.style.display = 'none';
+      }
+    }
+
+    /**
+     * Apply filters
+     */
+    function applyFilters() {
+      const status = document.getElementById('statusFilter').value;
+      const severityFilter = document.getElementById('severityFilter').value;
+      const type = document.getElementById('typeFilter').value;
+      const duration = document.getElementById('durationFilter').value;
+
+      filteredReports = allReports.filter(report => {
+        if (status && report.status !== status) return false;
+        
+        // Handle severity filter (supports "5,critical" format for both numeric and text)
+        if (severityFilter) {
+          const validValues = severityFilter.split(',');
+          const reportSeverity = String(report.severity);
+          if (!validValues.includes(reportSeverity)) return false;
+        }
+        
+        if (type && report.issueType !== type) return false;
+        
+        // Handle duration filter
+        if (duration) {
+          const isTemporary = report.isTemporary || report.durationType === 'temporary';
+          if (duration === 'temporary' && !isTemporary) return false;
+          if (duration === 'permanent' && isTemporary) return false;
+        }
+        
+        return true;
+      });
+
+      displayReports();
+      console.log(`🔍 Filtered to ${filteredReports.length} reports`);
+    }
+
+    /**
+     * Reset filters
+     */
+    function resetFilters() {
+      document.getElementById('statusFilter').value = '';
+      document.getElementById('severityFilter').value = '';
+      document.getElementById('typeFilter').value = '';
+      document.getElementById('durationFilter').value = '';
+
+      filteredReports = allReports;
+      displayReports();
+    }
+
+    /**
+     * Filter by proximity
+     */
+    function filterByProximity(location, radiusKm) {
+      filteredReports = allReports.filter(report => {
+        const lat = report.latitude || report.location?.latitude;
+        const lng = report.longitude || report.location?.longitude;
+        if (!lat || !lng) return false;
+
+        const distance = calculateDistance(location.lat, location.lng, lat, lng);
+        return distance <= radiusKm;
+      });
+
+      displayReports();
+      console.log(`🔍 Filtered to ${filteredReports.length} reports within ${radiusKm}km`);
+    }
+
+    /**
+     * Calculate distance between two coordinates (Haversine formula)
+     */
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    /**
+     * Navigate to location using Waze or Google Maps
+     */
+    window.navigateToLocation = function(lat, lng) {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+      `;
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 320px; width: 90%; text-align: center;">
+          <h3 style="margin: 0 0 16px 0; font-size: 1.25rem;">🧭 Navigate to Location</h3>
+          <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 20px;">Choose your preferred navigation app:</p>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <a href="https://waze.com/ul?ll=${lat},${lng}&navigate=yes" target="_blank" 
+               style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: #33ccff; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem;">
+              <span style="font-size: 1.5rem;">🚗</span> Open in Waze
+            </a>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank"
+               style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: #4285f4; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem;">
+              <span style="font-size: 1.5rem;">🗺️</span> Open in Google Maps
+            </a>
+            <a href="https://maps.apple.com/?daddr=${lat},${lng}" target="_blank"
+               style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: #333; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem;">
+              <span style="font-size: 1.5rem;">🍎</span> Open in Apple Maps
+            </a>
+          </div>
+          <button onclick="this.closest('div').parentElement.remove()" 
+                  style="margin-top: 16px; padding: 10px 24px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #374151;">
+            Cancel
+          </button>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+      document.body.appendChild(modal);
+    };
+
+    // ============== 311 EXPORT FUNCTIONS ==============
+
+    /**
+     * Status workflow configuration with municipal tracking
+     */
+    const statusWorkflow = {
+      new: { label: 'New', icon: '🆕', color: '#6b7280', bgColor: '#f3f4f6', nextStatus: 'acknowledged', description: 'Report just submitted' },
+      acknowledged: { label: 'Acknowledged', icon: '👀', color: '#0369a1', bgColor: '#e0f2fe', nextStatus: 'in_progress', description: 'Report has been reviewed' },
+      submitted_311: { label: 'Submitted to 311', icon: '🏛️', color: '#7c3aed', bgColor: '#ede9fe', nextStatus: 'in_progress', description: 'Reported to municipal authority' },
+      in_progress: { label: 'In Progress', icon: '🔧', color: '#d97706', bgColor: '#fef3c7', nextStatus: 'resolved', description: 'Work is being done' },
+      scheduled: { label: 'Scheduled', icon: '📅', color: '#0891b2', bgColor: '#cffafe', nextStatus: 'in_progress', description: 'Repair scheduled by authority' },
+      resolved: { label: 'Resolved', icon: '✅', color: '#059669', bgColor: '#d1fae5', nextStatus: 'closed', description: 'Issue has been fixed' },
+      closed: { label: 'Closed', icon: '📁', color: '#374151', bgColor: '#e5e7eb', nextStatus: null, description: 'Report finalized' },
+      wont_fix: { label: "Won't Fix", icon: '❌', color: '#dc2626', bgColor: '#fee2e2', nextStatus: null, description: 'Authority declined to fix' },
+      duplicate: { label: 'Duplicate', icon: '📋', color: '#9ca3af', bgColor: '#f3f4f6', nextStatus: null, description: 'Already reported elsewhere' }
+    };
+
+    /**
+     * Update report status with enhanced municipal tracking
+     */
+    window.updateReportStatus = async function(reportId, newStatus, note = '') {
+      if (!currentUser) {
+        showToast('Please sign in to update status', 'error');
+        return;
+      }
+
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      // Only owner can update status
+      if (report.userId !== currentUser.uid) {
+        showToast('Only the report owner can update status', 'error');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        
+        // Create status history entry - use Date object instead of serverTimestamp()
+        // because serverTimestamp() cannot be used inside arrayUnion()
+        const historyEntry = {
+          status: newStatus,
+          previousStatus: report.status || 'new',
+          timestamp: new Date().toISOString(),
+          userId: currentUser.uid,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          note: note || null
+        };
+
+        // Update the report
+        await updateDoc(reportRef, {
+          status: newStatus,
+          statusHistory: arrayUnion(historyEntry),
+          updatedAt: serverTimestamp()
+        });
+
+        const statusInfo = statusWorkflow[newStatus];
+        showToast(`${statusInfo.icon} Status updated to: ${statusInfo.label}`, 'success');
+
+        // Reload reports and refresh modal
+        await loadReports();
+        window.viewReportDetails(reportId);
+
+      } catch (error) {
+        console.error('Error updating status:', error);
+        showToast('Failed to update status: ' + error.message, 'error');
+      }
+    };
+
+    /**
+     * Show status update modal with municipal tracking
+     */
+    window.showStatusUpdateModal = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) return;
+
+      const currentStatus = report.status || 'new';
+      const municipalId = report.municipalTrackingId || '';
+      
+      const modal = document.createElement('div');
+      modal.id = 'statusUpdateModal';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000000; padding: 20px;';
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 450px; width: 100%; max-height: 90vh; overflow-y: auto;">
+          <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+            <span>🔄</span> Update Report Status
+          </h3>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">New Status</label>
+            <select id="newStatusSelect" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 1rem;" onchange="window.toggleMunicipalFields()">
+              ${Object.entries(statusWorkflow).map(([key, config]) => `
+                <option value="${key}" ${key === currentStatus ? 'selected' : ''} title="${config.description}">${config.icon} ${config.label}</option>
+              `).join('')}
+            </select>
+            <p id="statusDescription" style="margin: 6px 0 0 0; font-size: 0.8rem; color: #6b7280;">
+              ${statusWorkflow[currentStatus]?.description || ''}
+            </p>
+          </div>
+          
+          <!-- Municipal Tracking Section (shown for submitted_311 or scheduled) -->
+          <div id="municipalTrackingSection" style="display: none; margin-bottom: 16px; padding: 12px; background: #ede9fe; border-radius: 8px; border: 1px solid #c4b5fd;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #5b21b6;">
+              🏛️ Municipal Tracking ID
+            </label>
+            <input type="text" id="municipalTrackingId" value="${municipalId}" 
+                   placeholder="e.g., 311-2025-12345, SR-00123456"
+                   style="width: 100%; padding: 10px; border: 1px solid #c4b5fd; border-radius: 8px; font-size: 0.9rem; background: white;">
+            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #7c3aed;">
+              Enter the reference number from your 311 submission
+            </p>
+          </div>
+          
+          <!-- Scheduled Date (shown for scheduled status) -->
+          <div id="scheduledDateSection" style="display: none; margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">
+              📅 Scheduled Repair Date
+            </label>
+            <input type="date" id="scheduledDate" 
+                   style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem;">
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem;">Add Note (optional)</label>
+            <textarea id="statusNote" placeholder="e.g., 'Reported to city 311', 'Construction crew on site', 'Issue fixed!'" 
+                      style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.9rem; resize: vertical; min-height: 80px;"></textarea>
+          </div>
+          
+          <div style="display: flex; gap: 12px;">
+            <button onclick="document.getElementById('statusUpdateModal').remove()" 
+                    style="flex: 1; padding: 12px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #374151;">
+              Cancel
+            </button>
+            <button onclick="window.submitStatusUpdate('${reportId}')" 
+                    style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+              Update Status
+            </button>
+          </div>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+      
+      // Initialize visibility of conditional fields
+      window.toggleMunicipalFields();
+    };
+
+    /**
+     * Toggle visibility of municipal tracking fields based on selected status
+     */
+    window.toggleMunicipalFields = function() {
+      const select = document.getElementById('newStatusSelect');
+      const municipalSection = document.getElementById('municipalTrackingSection');
+      const scheduledSection = document.getElementById('scheduledDateSection');
+      const descriptionEl = document.getElementById('statusDescription');
+      
+      if (!select) return;
+      
+      const status = select.value;
+      const config = statusWorkflow[status];
+      
+      // Update description
+      if (descriptionEl && config) {
+        descriptionEl.textContent = config.description || '';
+      }
+      
+      // Show municipal tracking for 311-related statuses
+      if (municipalSection) {
+        municipalSection.style.display = ['submitted_311', 'scheduled', 'in_progress'].includes(status) ? 'block' : 'none';
+      }
+      
+      // Show scheduled date for scheduled status
+      if (scheduledSection) {
+        scheduledSection.style.display = status === 'scheduled' ? 'block' : 'none';
+      }
+    };
+
+    /**
+     * Submit status update from modal with municipal tracking
+     */
+    window.submitStatusUpdate = async function(reportId) {
+      const newStatus = document.getElementById('newStatusSelect').value;
+      const note = document.getElementById('statusNote').value.trim();
+      const municipalId = document.getElementById('municipalTrackingId')?.value.trim() || null;
+      const scheduledDate = document.getElementById('scheduledDate')?.value || null;
+      
+      document.getElementById('statusUpdateModal').remove();
+      
+      // Build additional data
+      const additionalData = {};
+      if (municipalId) additionalData.municipalTrackingId = municipalId;
+      if (scheduledDate) additionalData.scheduledRepairDate = new Date(scheduledDate);
+      if (newStatus === 'resolved') additionalData.resolvedAt = serverTimestamp();
+      
+      await window.updateReportStatusExtended(reportId, newStatus, note, additionalData);
+    };
+
+    /**
+     * Extended status update with additional fields
+     */
+    window.updateReportStatusExtended = async function(reportId, newStatus, note = '', additionalData = {}) {
+      if (!currentUser) {
+        showToast('Please sign in to update status', 'error');
+        return;
+      }
+
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      // Only owner can update status
+      if (report.userId !== currentUser.uid) {
+        showToast('Only the report owner can update status', 'error');
+        return;
+      }
+
+      try {
+        const reportRef = doc(db, 'accessibilityReports', reportId);
+        
+        // Create status history entry - use Date object instead of serverTimestamp()
+        // because serverTimestamp() cannot be used inside arrayUnion()
+        const historyEntry = {
+          status: newStatus,
+          previousStatus: report.status || 'new',
+          timestamp: new Date().toISOString(),
+          userId: currentUser.uid,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          note: note || null,
+          municipalTrackingId: additionalData.municipalTrackingId || null
+        };
+
+        // Build update object
+        const updateData = {
+          status: newStatus,
+          statusHistory: arrayUnion(historyEntry),
+          updatedAt: serverTimestamp(),
+          ...additionalData
+        };
+
+        // Update the report
+        await updateDoc(reportRef, updateData);
+
+        const statusInfo = statusWorkflow[newStatus];
+        showToast(`${statusInfo.icon} Status updated to: ${statusInfo.label}`, 'success');
+
+        // Reload reports and refresh modal
+        await loadReports();
+        window.viewReportDetails(reportId);
+
+      } catch (error) {
+        console.error('Error updating status:', error);
+        showToast('Failed to update status: ' + error.message, 'error');
+      }
+    };
+
+    /**
+     * Service codes for 311 integration
+     */
+    const SERVICE_CODES = {
+      curb_ramp: { code: 'CURB_RAMP', name: 'Curb Ramp Issue', group: 'Sidewalk & Accessibility' },
+      sidewalk_blocked: { code: 'SIDEWALK_OBSTRUCTION', name: 'Sidewalk Obstruction', group: 'Sidewalk & Accessibility' },
+      damaged_sidewalk: { code: 'SIDEWALK_REPAIR', name: 'Sidewalk Repair Needed', group: 'Sidewalk & Accessibility' },
+      tactile_paving: { code: 'TACTILE_PAVING', name: 'Tactile Paving Issue', group: 'Sidewalk & Accessibility' },
+      inaccessible_entrance: { code: 'BUILDING_ACCESS', name: 'Inaccessible Building Entrance', group: 'Building Accessibility' },
+      broken_elevator: { code: 'ELEVATOR_REPAIR', name: 'Elevator/Lift Out of Service', group: 'Building Accessibility' },
+      heavy_doors: { code: 'DOOR_ACCESSIBILITY', name: 'Door Accessibility Issue', group: 'Building Accessibility' },
+      stairs_only: { code: 'NO_RAMP_ACCESS', name: 'No Ramp/Elevator Access', group: 'Building Accessibility' },
+      parking_blocked: { code: 'PARKING_VIOLATION', name: 'Accessible Parking Blocked', group: 'Parking' },
+      no_parking: { code: 'PARKING_MISSING', name: 'No Accessible Parking', group: 'Parking' },
+      trail_obstacle: { code: 'TRAIL_HAZARD', name: 'Trail Obstacle/Hazard', group: 'Parks & Trails' },
+      trail_erosion: { code: 'TRAIL_EROSION', name: 'Trail Erosion/Damage', group: 'Parks & Trails' },
+      overgrown: { code: 'VEGETATION', name: 'Overgrown Vegetation', group: 'Parks & Trails' },
+      missing_sign: { code: 'SIGNAGE', name: 'Missing/Damaged Signage', group: 'Signage' },
+      other: { code: 'OTHER_ACCESS', name: 'Other Accessibility Issue', group: 'Other' }
+    };
+
+    /**
+     * Export report as formatted text for 311 submission
+     */
+    window.export311Text = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+
+      const textReport = `
+═══════════════════════════════════════════════════════════════
+               ACCESSIBILITY BARRIER REPORT
+                  For Municipal 311 Submission
+═══════════════════════════════════════════════════════════════
+
+ISSUE CATEGORY: ${serviceInfo.name}
+SERVICE CODE: ${serviceInfo.code}
+
+───────────────────────────────────────────────────────────────
+ISSUE DETAILS
+───────────────────────────────────────────────────────────────
+
+Title: ${report.title}
+
+Description:
+${report.description || 'No additional description provided.'}
+
+Severity Level: ${severity}/5 - ${severityLabel}
+
+Duration: ${report.isTemporary ? 'TEMPORARY' : 'PERMANENT/ONGOING'}
+${report.isTemporary && report.expectedResolution ? 'Expected Resolution: ' + new Date(report.expectedResolution).toLocaleDateString() : ''}
+
+───────────────────────────────────────────────────────────────
+LOCATION
+───────────────────────────────────────────────────────────────
+
+Coordinates: ${report.latitude?.toFixed(6)}, ${report.longitude?.toFixed(6)}
+${report.address ? 'Address: ' + report.address : ''}
+
+Google Maps: https://www.google.com/maps?q=${report.latitude},${report.longitude}
+
+───────────────────────────────────────────────────────────────
+VERIFICATION & SOURCE
+───────────────────────────────────────────────────────────────
+
+Report Date: ${date}
+Source: Accessible Community App
+Report ID: ${report.id}
+
+Community Verifications: ${report.verificationCount || 0}
+Status: ${(report.verificationCount || 0) >= 3 ? '✓ COMMUNITY VERIFIED' : 'Pending verification'}
+Community Upvotes: ${report.upvotes || 0}
+
+${report.photos && report.photos.length > 0 ? 'Photos Attached: ' + report.photos.length + ' photo(s)' : 'No photos attached'}
+
+───────────────────────────────────────────────────────────────
+SUGGESTED DEPARTMENT: ${serviceInfo.group}
+═══════════════════════════════════════════════════════════════
+Report generated by Accessible - Making nature accessible
+═══════════════════════════════════════════════════════════════
+`.trim();
+
+      // Copy to clipboard
+      navigator.clipboard.writeText(textReport).then(() => {
+        showToast('📋 Report copied to clipboard! Paste into your 311 submission.', 'success');
+      }).catch(err => {
+        // Fallback: show in modal for manual copy
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;';
+        modal.innerHTML = `
+          <div style="background: white; border-radius: 16px; padding: 24px; max-width: 600px; width: 100%; max-height: 80vh; overflow: auto;">
+            <h3 style="margin: 0 0 16px 0;">📋 311 Report</h3>
+            <p style="color: #6b7280; margin-bottom: 12px;">Copy the text below and paste into your 311 submission:</p>
+            <textarea style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px;" readonly>${textReport}</textarea>
+            <button onclick="this.closest('div').parentElement.remove()" style="margin-top: 16px; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Close</button>
+          </div>
+        `;
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        document.body.appendChild(modal);
+      });
+    };
+
+    /**
+     * Generate email template for 311 submission
+     */
+    window.export311Email = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+
+      const subject = `[Accessibility Report] ${severityLabel} Priority: ${report.title}`;
+      const body = `Dear ${serviceInfo.group} Department,
+
+I am writing to report an accessibility barrier that has been documented by the Accessible community.
+
+ISSUE: ${report.title}
+CATEGORY: ${serviceInfo.name}
+SEVERITY: ${severity}/5 (${severityLabel})
+LOCATION: ${report.address || 'Coordinates: ' + report.latitude?.toFixed(6) + ', ' + report.longitude?.toFixed(6)}
+
+DESCRIPTION:
+${report.description || 'Please see attached report for details.'}
+
+MAP LINK: https://www.google.com/maps?q=${report.latitude},${report.longitude}
+
+This report has been ${(report.verificationCount || 0) >= 3 ? 'verified by multiple community members' : 'submitted'} through the Accessible accessibility mapping platform.
+
+${report.isTemporary ? 'Note: This appears to be a TEMPORARY issue' + (report.expectedResolution ? ' with expected resolution by ' + new Date(report.expectedResolution).toLocaleDateString() : '') + '.' : ''}
+
+Thank you for your attention to this accessibility matter.
+
+Best regards,
+Accessible Community
+
+---
+Report ID: ${report.id}
+Generated: ${new Date().toLocaleString()}`;
+
+      // Open mailto link - use location.href for proper email client opening
+      const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailto;
+      
+      showToast('✉️ Email template opened. Add your local 311 email address.', 'success');
+    };
+
+    /**
+     * Print a formatted report
+     */
+    window.printReport = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const severityColor = { 1: '#22c55e', 2: '#84cc16', 3: '#f59e0b', 4: '#ea580c', 5: '#dc2626' }[severity];
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Accessibility Report - ${escapeHtml(report.title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #1f2937; line-height: 1.5; }
+    h1 { color: #1f2937; border-bottom: 3px solid #667eea; padding-bottom: 12px; margin-bottom: 8px; }
+    .subtitle { color: #6b7280; margin-bottom: 24px; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .report-id { background: #f3f4f6; padding: 8px 16px; border-radius: 8px; font-family: monospace; }
+    .section { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
+    .section-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 16px; color: #374151; }
+    .field { margin-bottom: 14px; }
+    .field-label { font-weight: 600; color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .field-value { font-size: 1rem; color: #111827; }
+    .severity-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; color: white; font-weight: 700; background: ${severityColor}; }
+    .temp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.8rem; margin-left: 8px; }
+    .stats-row { display: flex; gap: 30px; }
+    .stat { text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; }
+    .verified-badge { background: #ecfdf5; border: 2px solid #10b981; color: #059669; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-top: 12px; display: inline-block; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; font-size: 0.85rem; color: #6b7280; }
+    @media print { body { padding: 0; } .section { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="header-row">
+    <div>
+      <h1>🏛️ Accessibility Issue Report</h1>
+      <div class="subtitle">For Municipal 311 Submission</div>
+    </div>
+    <div class="report-id"><strong>ID:</strong> ${report.id?.substring(0, 8) || 'N/A'}</div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">📋 Issue Details</div>
+    <div class="field">
+      <div class="field-label">Report Title</div>
+      <div class="field-value" style="font-size: 1.2rem; font-weight: 600;">${escapeHtml(report.title)}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Issue Category</div>
+      <div class="field-value">${serviceInfo.name} <span style="color: #6b7280;">(${serviceInfo.group})</span></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Severity Level</div>
+      <div class="field-value">
+        <span class="severity-badge">${severity}/5 - ${severityLabel}</span>
+        ${isTemporary ? '<span class="temp-badge">⏳ TEMPORARY</span>' : ''}
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Description</div>
+      <div class="field-value">${escapeHtml(report.description) || 'No additional description provided'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Service Code</div>
+      <div class="field-value" style="font-family: monospace; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; display: inline-block;">${serviceInfo.code}</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">📍 Location Information</div>
+    <div class="field">
+      <div class="field-label">Address</div>
+      <div class="field-value">${escapeHtml(report.address) || 'Address not provided'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">GPS Coordinates</div>
+      <div class="field-value">${report.latitude?.toFixed(6) || 'N/A'}, ${report.longitude?.toFixed(6) || 'N/A'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Map Link</div>
+      <div class="field-value">https://www.google.com/maps?q=${report.latitude},${report.longitude}</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">👥 Community Validation</div>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-value">${report.upvotes || 0}</div>
+        <div class="stat-label">Community Upvotes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${report.verificationCount || 0}</div>
+        <div class="stat-label">User Verifications</div>
+      </div>
+    </div>
+    ${(report.verificationCount || 0) >= 3 ? '<div class="verified-badge">✅ Community Verified Report</div>' : ''}
+  </div>
+  
+  <div class="section">
+    <div class="section-title">📅 Timeline</div>
+    <div class="field">
+      <div class="field-label">Reported On</div>
+      <div class="field-value">${date}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Current Status</div>
+      <div class="field-value" style="text-transform: uppercase; font-weight: 600;">${report.status || 'NEW'}</div>
+    </div>
+    ${isTemporary && report.expectedResolution ? `
+    <div class="field">
+      <div class="field-label">Expected Resolution</div>
+      <div class="field-value">${new Date(report.expectedResolution).toLocaleDateString()}</div>
+    </div>
+    ` : ''}
+  </div>
+  
+  <div class="footer">
+    <p><strong>Report ID:</strong> ${report.id}</p>
+    <p><strong>Source:</strong> Accessible - Community Accessibility Mapping Platform</p>
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+  </div>
+</bo${""}dy>
+</ht${""}ml>`;
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    };
+
+    /**
+     * Download report as HTML file (can be printed/saved as PDF)
+     */
+    window.downloadReport = function(reportId) {
+      const report = allReports.find(r => r.id === reportId);
+      if (!report) {
+        showToast('Report not found', 'error');
+        return;
+      }
+
+      const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+      const severity = report.severity || 3;
+      const severityLabel = severityLabels[severity] || 'Medium';
+      const severityColor = { 1: '#22c55e', 2: '#84cc16', 3: '#f59e0b', 4: '#ea580c', 5: '#dc2626' }[severity];
+      const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleString() : 'Unknown';
+      const isTemporary = report.isTemporary || report.durationType === 'temporary';
+      const photoUrls = report.photoUrls || [];
+
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Accessibility Report - ${escapeHtml(report.title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #1f2937; line-height: 1.5; background: #f8fafc; }
+    .report-container { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    h1 { color: #1f2937; border-bottom: 3px solid #667eea; padding-bottom: 12px; margin-bottom: 8px; font-size: 1.75rem; }
+    .subtitle { color: #6b7280; margin-bottom: 24px; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .report-id { background: #f3f4f6; padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; }
+    .section { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
+    .section-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 16px; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .field { margin-bottom: 14px; }
+    .field-label { font-weight: 600; color: #6b7280; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .field-value { font-size: 1rem; color: #111827; }
+    .severity-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; color: white; font-weight: 700; background: ${severityColor}; }
+    .temp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.8rem; margin-left: 8px; }
+    .stats-row { display: flex; gap: 30px; }
+    .stat { text-align: center; padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; }
+    .verified-badge { background: #ecfdf5; border: 2px solid #10b981; color: #059669; padding: 8px 16px; border-radius: 8px; font-weight: 600; margin-top: 12px; display: inline-block; }
+    .photos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+    .photo-item { border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; }
+    .photo-item img { width: 100%; height: 150px; object-fit: cover; }
+    .qr-section { text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 12px; }
+    .map-link { background: #eff6ff; padding: 12px; border-radius: 8px; margin-top: 8px; word-break: break-all; font-size: 0.9rem; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; font-size: 0.85rem; color: #6b7280; }
+    .footer p { margin: 4px 0; }
+    .print-instructions { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; color: #92400e; }
+    @media print { 
+      body { padding: 0; background: white; } 
+      .report-container { box-shadow: none; padding: 20px; }
+      .section { break-inside: avoid; } 
+      .print-instructions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-instructions">
+    💡 <strong>To save as PDF:</strong> Press Ctrl+P (or Cmd+P on Mac), select "Save as PDF" as the printer.
+  </div>
+  <div class="report-container">
+    <div class="header-row">
+      <div>
+        <h1>🏛️ Accessibility Issue Report</h1>
+        <div class="subtitle">For Municipal 311 Submission</div>
+      </div>
+      <div class="report-id"><strong>ID:</strong> ${report.id?.substring(0, 8) || 'N/A'}</div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📋 Issue Details</div>
+      <div class="field">
+        <div class="field-label">Report Title</div>
+        <div class="field-value" style="font-size: 1.2rem; font-weight: 600;">${escapeHtml(report.title)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Issue Category</div>
+        <div class="field-value">${serviceInfo.name} <span style="color: #6b7280;">(${serviceInfo.group})</span></div>
+      </div>
+      <div class="field">
+        <div class="field-label">Severity Level</div>
+        <div class="field-value">
+          <span class="severity-badge">${severity}/5 - ${severityLabel}</span>
+          ${isTemporary ? '<span class="temp-badge">⏳ TEMPORARY</span>' : ''}
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Description</div>
+        <div class="field-value">${escapeHtml(report.description) || 'No additional description provided'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">311 Service Code</div>
+        <div class="field-value" style="font-family: monospace; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; display: inline-block;">${serviceInfo.code}</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📍 Location Information</div>
+      <div class="field">
+        <div class="field-label">Address</div>
+        <div class="field-value">${escapeHtml(report.address) || 'Address not provided'}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">GPS Coordinates</div>
+        <div class="field-value">${report.latitude?.toFixed(6) || 'N/A'}, ${report.longitude?.toFixed(6) || 'N/A'}</div>
+      </div>
+      <div class="map-link">
+        <strong>📍 View on Map:</strong> https://www.google.com/maps?q=${report.latitude},${report.longitude}
+      </div>
+    </div>
+    
+    ${photoUrls.length > 0 ? `
+    <div class="section">
+      <div class="section-title">📷 Photo Evidence (${photoUrls.length})</div>
+      <div class="photos-grid">
+        ${photoUrls.slice(0, 4).map(url => `<div class="photo-item"><img src="${url}" alt="Report photo"></div>`).join('')}
+      </div>
+      ${photoUrls.length > 4 ? `<p style="margin-top: 8px; color: #6b7280; font-size: 0.85rem;">+ ${photoUrls.length - 4} more photos available online</p>` : ''}
+    </div>
+    ` : ''}
+    
+    <div class="section">
+      <div class="section-title">👥 Community Validation</div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value">${report.upvotes || 0}</div>
+          <div class="stat-label">Community Upvotes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${report.verificationCount || 0}</div>
+          <div class="stat-label">In-Person Verifications</div>
+        </div>
+      </div>
+      ${(report.verificationCount || 0) >= 3 ? '<div class="verified-badge">✅ Community Verified Report</div>' : ''}
+    </div>
+    
+    <div class="section">
+      <div class="section-title">📅 Timeline</div>
+      <div class="field">
+        <div class="field-label">Reported On</div>
+        <div class="field-value">${date}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Current Status</div>
+        <div class="field-value" style="text-transform: uppercase; font-weight: 600;">${report.status || 'NEW'}</div>
+      </div>
+      ${isTemporary && report.expectedResolution ? `
+      <div class="field">
+        <div class="field-label">Expected Resolution</div>
+        <div class="field-value">${new Date(report.expectedResolution).toLocaleDateString()}</div>
+      </div>
+      ` : ''}
+    </div>
+    
+    <div class="footer">
+      <p><strong>Report ID:</strong> ${report.id}</p>
+      <p><strong>Source:</strong> Accessible - Community Accessibility Mapping Platform</p>
+      <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+      <p><strong>Online Report:</strong> ${window.location.origin}/reports.html#report=${report.id}</p>
+    </div>
+  </div>
+</bo${""}dy>
+</ht${""}ml>`;
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `accessibility-report-${report.id?.substring(0, 8) || 'export'}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('📥 Report downloaded! Open the file and print to PDF.', 'success');
+    };
+
+    /**
+     * Show 311 submission info modal
+     */
+    window.show311Info = function() {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999999; padding: 20px;';
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 100%; max-height: 80vh; overflow: auto;">
+          <h3 style="margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.5rem;">📋</span> How to Submit to 311
+          </h3>
+          
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <h4 style="margin: 0 0 8px 0; color: #0369a1;">What is 311?</h4>
+            <p style="margin: 0; color: #0c4a6e; font-size: 0.9rem;">
+              311 is a non-emergency municipal service hotline used by cities to report issues like broken sidewalks, accessibility barriers, and other civic concerns.
+            </p>
+          </div>
+          
+          <h4 style="margin: 0 0 12px 0;">Steps to Submit:</h4>
+          <ol style="margin: 0 0 16px 0; padding-left: 20px; color: #374151;">
+            <li style="margin-bottom: 8px;"><strong>Copy the Report</strong> - Click "&#128196; Copy Report" to copy the formatted report to your clipboard.</li>
+            <li style="margin-bottom: 8px;"><strong>Find Your Local 311</strong> - Search for "[Your City] 311" or "[Your City] accessibility services"</li>
+            <li style="margin-bottom: 8px;"><strong>Submit Online or Call</strong> - Most cities have online portals, mobile apps, or phone lines (dial 311)</li>
+            <li style="margin-bottom: 8px;"><strong>Paste the Report</strong> - Use the copied text in the description field</li>
+            <li style="margin-bottom: 8px;"><strong>Include Photos</strong> - If you have photos, attach them to your submission</li>
+          </ol>
+          
+          <h4 style="margin: 0 0 12px 0;">Common 311 Portals:</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+            <a href="https://www.capetown.gov.za/Collaborate/Report-a-problem" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🇿🇦 Cape Town</a>
+            <a href="https://portal.311.nyc.gov/" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🗽 NYC 311</a>
+            <a href="https://311.la.gov/" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🌴 LA 311</a>
+            <a href="https://sf311.org/" target="_blank" style="padding: 6px 12px; background: #e5e7eb; border-radius: 20px; text-decoration: none; color: #374151; font-size: 0.85rem;">🌉 SF 311</a>
+          </div>
+          
+          <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 16px;">
+            <strong>Tip:</strong> Reports verified by 3+ community members are more likely to be prioritized by authorities.
+          </p>
+          
+          <button onclick="this.closest('div').parentElement.remove()" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Got it!</button>
+        </div>
+      `;
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    };
+
+    /**
+     * Export filtered reports to CSV for 311 bulk submission
+     */
+    function exportFilteredReportsCSV() {
+      // Get currently filtered reports
+      const reportsToExport = filteredReports.length > 0 ? filteredReports : allReports;
+      
+      if (reportsToExport.length === 0) {
+        showToast('No reports to export', 'error');
+        return;
+      }
+
+      const headers = [
+        'Report ID',
+        'Title',
+        'Issue Type',
+        'Service Code',
+        'Severity',
+        'Priority',
+        'Status',
+        'Is Temporary',
+        'Latitude',
+        'Longitude',
+        'Address',
+        'Description',
+        'Upvotes',
+        'Verifications',
+        'Community Verified',
+        'Reported Date',
+        'Reporter Name',
+        'Municipal Tracking ID',
+        'Resolution Date',
+        'Map Link'
+      ];
+
+      const priorityMap = { 1: 'Low', 2: 'Low', 3: 'Medium', 4: 'High', 5: 'Urgent' };
+
+      const escapeCsvField = (value) => {
+        if (!value) return '""';
+        const escaped = String(value).replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, '');
+        return `"${escaped}"`;
+      };
+
+      const rows = reportsToExport.map(report => {
+        const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+        const date = report.createdAt?.toDate?.() || new Date();
+        const severity = report.severity || 3;
+        const resolutionDate = report.resolvedAt?.toDate?.() || null;
+
+        return [
+          report.id || '',
+          escapeCsvField(report.title || ''),
+          report.issueType || '',
+          serviceInfo.code,
+          `${severity} - ${severityLabels[severity]}`,
+          priorityMap[severity] || 'Medium',
+          report.status || 'new',
+          report.isTemporary ? 'Yes' : 'No',
+          report.latitude?.toFixed(6) || '',
+          report.longitude?.toFixed(6) || '',
+          escapeCsvField(report.address || ''),
+          escapeCsvField((report.description || '').substring(0, 500)),
+          report.upvotes || 0,
+          report.verificationCount || 0,
+          (report.verificationCount || 0) >= 3 ? 'Yes' : 'No',
+          date.toISOString().split('T')[0],
+          escapeCsvField(report.userName || 'Anonymous'),
+          escapeCsvField(report.municipalTrackingId || ''),
+          resolutionDate ? resolutionDate.toISOString().split('T')[0] : '',
+          `https://www.google.com/maps?q=${report.latitude},${report.longitude}`
+        ].join(',');
+      });
+
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `access-nature-reports-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast(`📊 Exported ${reportsToExport.length} reports to CSV`, 'success');
+    }
+
+    /**
+     * Print all filtered reports (for PDF export via print dialog)
+     */
+    function printAllFilteredReports() {
+      const reportsToExport = filteredReports.length > 0 ? filteredReports : allReports;
+      
+      if (reportsToExport.length === 0) {
+        showToast('No reports to print', 'error');
+        return;
+      }
+
+      if (reportsToExport.length > 50) {
+        if (!confirm(`This will generate a print-friendly document with ${reportsToExport.length} reports. This may take a moment. Continue?`)) {
+          return;
+        }
+      }
+
+      const generateReportCard = (report, index) => {
+        const serviceInfo = SERVICE_CODES[report.issueType] || SERVICE_CODES.other;
+        const severity = report.severity || 3;
+        const severityLabel = severityLabels[severity] || 'Medium';
+        const severityColor = { 1: '#22c55e', 2: '#84cc16', 3: '#f59e0b', 4: '#ea580c', 5: '#dc2626' }[severity];
+        const date = report.createdAt?.toDate ? report.createdAt.toDate().toLocaleDateString() : 'Unknown';
+        const isTemporary = report.isTemporary || report.durationType === 'temporary';
+        const isVerified = (report.verificationCount || 0) >= 3;
+
+        return `
+          <div class="report-card ${index > 0 ? 'page-break' : ''}">
+            <div class="card-header">
+              <div class="report-number">#${index + 1}</div>
+              <h2>${escapeHtml(report.title)}</h2>
+              <div class="badges">
+                <span class="severity-badge" style="background: ${severityColor};">${severity}/5 - ${severityLabel}</span>
+                ${isTemporary ? '<span class="temp-badge">⏳ TEMPORARY</span>' : ''}
+                ${isVerified ? '<span class="verified-badge">✅ VERIFIED</span>' : ''}
+              </div>
+            </div>
+            
+            <div class="card-body">
+              <div class="field-row">
+                <div class="field">
+                  <span class="label">Category</span>
+                  <span class="value">${serviceInfo.name}</span>
+                </div>
+                <div class="field">
+                  <span class="label">Service Code</span>
+                  <span class="value code">${serviceInfo.code}</span>
+                </div>
+                <div class="field">
+                  <span class="label">Status</span>
+                  <span class="value">${(report.status || 'New').toUpperCase()}</span>
+                </div>
+              </div>
+              
+              <div class="field full-width">
+                <span class="label">Description</span>
+                <span class="value">${escapeHtml(report.description || 'No description provided')}</span>
+              </div>
+              
+              <div class="field-row">
+                <div class="field">
+                  <span class="label">📍 Address</span>
+                  <span class="value">${escapeHtml(report.address || 'Not provided')}</span>
+                </div>
+                <div class="field">
+                  <span class="label">GPS</span>
+                  <span class="value code">${report.latitude?.toFixed(5)}, ${report.longitude?.toFixed(5)}</span>
+                </div>
+              </div>
+              
+              <div class="field-row">
+                <div class="field">
+                  <span class="label">👍 Upvotes</span>
+                  <span class="value">${report.upvotes || 0}</span>
+                </div>
+                <div class="field">
+                  <span class="label">✓ Verifications</span>
+                  <span class="value">${report.verificationCount || 0}</span>
+                </div>
+                <div class="field">
+                  <span class="label">📅 Reported</span>
+                  <span class="value">${date}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-footer">
+              <span>ID: ${report.id?.substring(0, 12) || 'N/A'}</span>
+              <span>Map: google.com/maps?q=${report.latitude},${report.longitude}</span>
+            </div>
+          </div>
+        `;
+      };
+
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Accessible - ${reportsToExport.length} Accessibility Reports</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; padding: 20px; color: #1f2937; line-height: 1.4; }
+    
+    .print-header { background: linear-gradient(135deg, #2c5530, #4a7c59); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; text-align: center; }
+    .print-header h1 { font-size: 1.75rem; margin-bottom: 8px; }
+    .print-header p { opacity: 0.9; }
+    .print-header .stats { display: flex; justify-content: center; gap: 30px; margin-top: 16px; }
+    .print-header .stat { text-align: center; }
+    .print-header .stat-value { font-size: 1.5rem; font-weight: 700; }
+    .print-header .stat-label { font-size: 0.85rem; opacity: 0.8; }
+    
+    .report-card { background: white; border-radius: 12px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .card-header { background: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }
+    .card-header .report-number { font-size: 0.85rem; color: #6b7280; margin-bottom: 4px; }
+    .card-header h2 { font-size: 1.1rem; margin-bottom: 8px; }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .severity-badge { padding: 4px 10px; border-radius: 20px; color: white; font-size: 0.75rem; font-weight: 600; }
+    .temp-badge { padding: 3px 8px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.7rem; }
+    .verified-badge { padding: 3px 8px; border-radius: 20px; background: #10b981; color: white; font-size: 0.7rem; }
+    
+    .card-body { padding: 16px 20px; }
+    .field-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .field { flex: 1; min-width: 150px; }
+    .field.full-width { flex: 100%; }
+    .field .label { display: block; font-size: 0.7rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .field .value { font-size: 0.9rem; color: #111827; }
+    .field .value.code { font-family: monospace; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+    
+    .card-footer { background: #f8fafc; padding: 10px 20px; font-size: 0.75rem; color: #6b7280; display: flex; justify-content: space-between; border-top: 1px solid #e5e7eb; }
+    
+    .print-footer { margin-top: 24px; padding: 16px; background: white; border-radius: 8px; text-align: center; font-size: 0.85rem; color: #6b7280; }
+    
+    .page-break { page-break-before: auto; }
+    
+    @media print {
+      body { padding: 0; background: white; }
+      .print-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-after: avoid; }
+      .report-card { page-break-inside: avoid; box-shadow: none; border: 1px solid #e5e7eb; }
+      .severity-badge, .temp-badge, .verified-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    
+    @media (max-width: 600px) {
+      .field-row { flex-direction: column; gap: 8px; }
+      .field { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <h1>🏛️ Accessible - Accessibility Reports</h1>
+    <p>Bulk Report Export for Municipal 311 Submission</p>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">${reportsToExport.length}</div>
+        <div class="stat-label">Total Reports</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${reportsToExport.filter(r => (r.verificationCount || 0) >= 3).length}</div>
+        <div class="stat-label">Verified</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">${reportsToExport.filter(r => r.severity >= 4).length}</div>
+        <div class="stat-label">High Priority</div>
+      </div>
+    </div>
+  </div>
+  
+  ${reportsToExport.map((report, i) => generateReportCard(report, i)).join('')}
+  
+  <div class="print-footer">
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()} | <strong>Source:</strong> Accessible Community Platform</p>
+    <p style="margin-top: 4px;">To save as PDF: Press Ctrl+P (Cmd+P on Mac) → Select "Save as PDF"</p>
+  </div>
+</bo${""}dy>
+</ht${""}ml>`;
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Auto-trigger print after a short delay
+      setTimeout(() => printWindow.print(), 500);
+    }
+
+    /**
+     * Toggle fullscreen map with proper modal
+     */
+    function toggleFullscreen() {
+      const mapSection = document.querySelector('.map-section');
+      const mapElement = document.getElementById('reportMap');
+      const btn = document.getElementById('fullscreenBtn');
+
+      if (document.getElementById('fullscreenMapModal')) {
+        // Close fullscreen
+        closeFullscreenMap();
+      } else {
+        // Open fullscreen modal
+        openFullscreenMap();
+      }
+    }
+
+    /**
+     * Open fullscreen map modal
+     */
+    function openFullscreenMap() {
+      const modal = document.createElement('div');
+      modal.id = 'fullscreenMapModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+      `;
+      
+      modal.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: white; border-bottom: 1px solid #e5e7eb;">
+          <h2 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+            🗺️ Accessibility Reports Map
+          </h2>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="font-size: 0.875rem; color: #6b7280;">${filteredReports.length} reports</span>
+            <button id="closeFullscreenMapBtn" style="width: 40px; height: 40px; background: #f3f4f6; border: none; border-radius: 8px; cursor: pointer; font-size: 1.25rem; display: flex; align-items: center; justify-content: center;">✕</button>
+          </div>
+        </div>
+        <div id="fullscreenMapContainer" style="flex: 1; position: relative;"></div>
+      `;
+      
+      document.body.appendChild(modal);
+      document.body.style.overflow = 'hidden';
+      
+      // Move map to fullscreen container
+      const mapElement = document.getElementById('reportMap');
+      const originalParent = mapElement.parentElement;
+      const fullscreenContainer = document.getElementById('fullscreenMapContainer');
+      
+      // Store original parent for restoration
+      window.originalMapParent = originalParent;
+      
+      // Move map
+      fullscreenContainer.appendChild(mapElement);
+      mapElement.style.height = '100%';
+      mapElement.style.borderRadius = '0';
+      
+      // Update map size
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+      
+      // Update button
+      document.getElementById('fullscreenBtn').textContent = '✕';
+      
+      // Close button handler
+      document.getElementById('closeFullscreenMapBtn').addEventListener('click', closeFullscreenMap);
+      
+      // ESC key handler
+      const escHandler = (e) => {
+        if (e.key === 'Escape') {
+          closeFullscreenMap();
+          document.removeEventListener('keydown', escHandler);
+        }
+      };
+      document.addEventListener('keydown', escHandler);
+    }
+
+    /**
+     * Close fullscreen map modal
+     */
+    function closeFullscreenMap() {
+      const modal = document.getElementById('fullscreenMapModal');
+      if (!modal) return;
+      
+      const mapElement = document.getElementById('reportMap');
+      
+      // Move map back to original location
+      if (window.originalMapParent) {
+        window.originalMapParent.appendChild(mapElement);
+        mapElement.style.height = '500px';
+        mapElement.style.borderRadius = '8px';
+      }
+      
+      // Remove modal
+      modal.remove();
+      document.body.style.overflow = '';
+      
+      // Update button
+      document.getElementById('fullscreenBtn').textContent = '⛶';
+      
+      // Update map size
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+    }
+
+    /**
+     * Escape HTML
+     */
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+
+    console.log('📄 Reports page script loaded');
+  </script>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="auth-modal hidden">
+    <div class="auth-modal-backdrop" onclick="closeAuthModal()"></div>
+    <div class="auth-modal-container">
+      <div class="auth-modal-header">
+        <h2 id="authModalTitle">Welcome to Accessible</h2>
+        <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+      </div>
+      
+      <div class="auth-modal-content">
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-form active">
+          <div class="auth-form-header">
+            <h3>Sign In to Your Account</h3>
+            <p>Continue your accessibility mapping journey</p>
+          </div>
+          
+          <form class="auth-inputs" id="loginFormElement">
+            <div class="input-group">
+              <input type="email" id="loginEmail" placeholder="Email address" required autocomplete="email">
+              <span class="input-icon">📧</span>
+            </div>
+            
+            <div class="input-group password-group">
+              <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
+              <span class="input-icon">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Show password">👁️</button>
+            </div>
+            
+            <button type="submit" id="loginBtn" class="auth-submit-btn">
+              <span class="btn-text">Sign In</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Don't have an account? <button type="button" onclick="switchToSignup()" class="switch-btn">Sign up</button></p>
+          </div>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" class="auth-form">
+          <div class="auth-form-header">
+            <h3>Create Your Account</h3>
+            <p>Join the community making nature accessible</p>
+          </div>
+          
+          <form class="auth-inputs" id="signupFormElement">
+            <div class="input-group">
+              <input type="text" id="signupName" placeholder="Full name" required autocomplete="name">
+              <span class="input-icon">👤</span>
+            </div>
+            
+            <div class="input-group">
+              <input type="email" id="signupEmail" placeholder="Email address" required autocomplete="email">
+              <span class="input-icon">📧</span>
+            </div>
+            
+            <div class="input-group password-group">
+              <input type="password" id="signupPassword" placeholder="Create password" required autocomplete="new-password">
+              <span class="input-icon">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Show password">👁️</button>
+            </div>
+            
+            <button type="submit" id="signupBtn" class="auth-submit-btn">
+              <span class="btn-text">Create Account</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </form>
+          
+          <div class="auth-switch">
+            <p>Already have an account? <button type="button" onclick="switchToLogin()" class="switch-btn">Sign in</button></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal Helper Functions -->
+  <script>
+    function openAuthModal() {
+      document.getElementById('authModal')?.classList.remove('hidden');
+    }
+    function closeAuthModal() {
+      document.getElementById('authModal')?.classList.add('hidden');
+    }
+    function switchToSignup() {
+      document.getElementById('loginForm')?.classList.remove('active');
+      document.getElementById('signupForm')?.classList.add('active');
+    }
+    function switchToLogin() {
+      document.getElementById('signupForm')?.classList.remove('active');
+      document.getElementById('loginForm')?.classList.add('active');
+    }
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.setAttribute('aria-label', 'Show password');
+      }
+    }
+  </script>
+  
+  <!-- Auth Form Handlers -->
+  <script type="module">
+    import { initializeApp, getApp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
+    
+    // Get existing Firebase app (already initialized in main script)
+    let authApp;
+    try {
+      authApp = getApp();
+    } catch (e) {
+      // Fallback: initialize if not already done
+      authApp = initializeApp({
+        apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
+        authDomain: "accessnaturebeta-821a2.firebaseapp.com",
+        projectId: "accessnaturebeta-821a2",
+        storageBucket: "accessnaturebeta-821a2.appspot.com",
+        messagingSenderId: "670888101781",
+        appId: "1:670888101781:web:b4cf57f58e86182466589c"
+      });
+    }
+    
+    const firebaseAuth = getAuth(authApp);
+    
+    // Login form handler
+    document.getElementById('loginFormElement')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      
+      try {
+        btn.disabled = true;
+        btn.querySelector('.btn-text').textContent = 'Signing in...';
+        await signInWithEmailAndPassword(firebaseAuth, email, password);
+        closeAuthModal();
+      } catch (error) {
+        alert('Sign in failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').textContent = 'Sign In';
+      }
+    });
+    
+    // Signup form handler
+    document.getElementById('signupFormElement')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const btn = document.getElementById('signupBtn');
+      
+      try {
+        btn.disabled = true;
+        btn.querySelector('.btn-text').textContent = 'Creating account...';
+        const result = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+        await updateProfile(result.user, { displayName: name });
+        closeAuthModal();
+      } catch (error) {
+        alert('Sign up failed: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').textContent = 'Create Account';
+      }
+    });
+  </script>
+  
+  <!-- Global Bottom Navigation -->
+  <script type="module">
+    import { initGlobalNav } from './src/components/globalNav.js';
+    
+    // Initialize bottom nav
+    initGlobalNav({ currentPage: 'reports' });
+    
+    // Expose openAuthModal for bottom nav
+    window.openAuthModal = () => {
+      const authModal = document.getElementById('authModal');
+      if (authModal) {
+        authModal.classList.remove('hidden');
+      }
+    };
+    
+    // Expose function for action sheet to open report modal
+    window.openReportModal = () => {
+      const createBtn = document.querySelector('[data-action="create-report"]') || 
+                       document.getElementById('createReportBtn');
+      if (createBtn) createBtn.click();
+    };
+    
+    // Handle URL action parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('action') === 'create') {
+      setTimeout(() => window.openReportModal?.(), 500);
+    }
+  </script>
+  
+  <!-- Beta Feedback Button -->
+  <script type="module">
+    import { betaFeedback } from './src/utils/betaFeedback.js';
+    betaFeedback.initialize();
+  </script>
+</body>
+</html>
