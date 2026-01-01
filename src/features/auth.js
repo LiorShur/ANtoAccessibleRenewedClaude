@@ -187,6 +187,11 @@ setupCloudButtonsWithRetry() {
       if (user) {
         console.log('✅ User signed in:', user.email);
         
+        // Dispatch auth state changed event for other modules (e.g., offlineSync)
+        window.dispatchEvent(new CustomEvent('authStateChanged', { 
+          detail: { user, authenticated: true } 
+        }));
+        
         // Verify the user still exists on the server
         try {
           // Try to reload the user to verify they still exist
@@ -227,6 +232,11 @@ setupCloudButtonsWithRetry() {
         this.showCloudSyncIndicator('Connected to cloud');
       } else {
         console.log('👋 User signed out');
+        
+        // Dispatch auth state changed event
+        window.dispatchEvent(new CustomEvent('authStateChanged', { 
+          detail: { user: null, authenticated: false } 
+        }));
         
         // Reset userService on logout
         userService.reset();

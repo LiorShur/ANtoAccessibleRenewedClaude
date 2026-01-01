@@ -69,6 +69,7 @@ class OfflineSync {
   async initialize() {
     await this.openDatabase();
     this.setupConnectivityListeners();
+    this.setupAuthListener();
     await this.loadEmailJS();
     
     // Check for pending uploads on init
@@ -82,6 +83,66 @@ class OfflineSync {
     }
     
     console.log('✅ Offline Sync Manager initialized');
+  }
+
+  /**
+   * Setup auth state listener to detect sign-in and prompt for uploads
+   */
+  setupAuthListener() {
+    // Listen for auth state changes
+    window.addEventListener('authStateChanged', async (e) => {
+      const user = e.detail?.user;
+      if (user) {
+        // User just signed in - check for pending uploads
+        await this.handleUserSignIn(user);
+      }
+    });
+    
+    // Also check sessionStorage for pending upload after auth redirect
+    setTimeout(async () => {
+      const pendingUploadData = sessionStorage.getItem('pendingCloudUpload');
+      if (pendingUploadData) {
+        try {
+          const { routeName, timestamp } = JSON.parse(pendingUploadData);
+          // Only process if saved within last 5 minutes
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            const app = window.AccessNatureApp;
+            const authController = app?.getController('auth');
+            if (authController?.isAuthenticated()) {
+              await this.handleUserSignIn(authController.getCurrentUser());
+            }
+          }
+        } catch (e) {
+          console.warn('Could not process pending upload:', e);
+        }
+        sessionStorage.removeItem('pendingCloudUpload');
+      }
+    }, 2000); // Wait for app to fully initialize
+  }
+
+  /**
+   * Handle user sign-in - check for pending uploads
+   */
+  async handleUserSignIn(user) {
+    if (!user) return;
+    
+    const pendingCount = await this.getPendingCount();
+    if (pendingCount === 0) return;
+    
+    console.log(`🔐 User signed in with ${pendingCount} pending uploads`);
+    
+    // Show prompt after a short delay to let auth UI settle
+    setTimeout(async () => {
+      const { modal } = await import('../utils/modal.js');
+      const wantsToUpload = await modal.confirm(
+        `You have ${pendingCount} route${pendingCount > 1 ? 's' : ''} saved locally.\n\nWould you like to upload ${pendingCount > 1 ? 'them' : 'it'} to the cloud now?`,
+        '☁️ Upload Pending Routes'
+      );
+      
+      if (wantsToUpload) {
+        this.showPendingUploadsModal();
+      }
+    }, 1000);
   }
 
   /**
@@ -456,18 +517,122 @@ class OfflineSync {
         'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
       );
 
-      const docData = {
-        ...routeData,
-        userId: user.uid,
-        userDisplayName: user.displayName || 'Anonymous',
-        createdAt: serverTimestamp()
-      };
+      // Handle both old format (flat) and new format (nested routeData, routeInfo, accessibilityData)
+      let docData;
+      let actualRouteData;
+      let routeInfo;
+      let accessibilityData;
+      
+      if (routeData.routeData && routeData.routeInfo) {
+        // New format from tracking.js saveRoute
+        actualRouteData = routeData.routeData;
+        routeInfo = routeData.routeInfo;
+        accessibilityData = routeData.accessibilityData;
+        
+        docData = {
+          userId: user.uid,
+          userEmail: user.email,
+          userDisplayName: user.displayName || 'Anonymous',
+          routeName: routeInfo.name || routeData.name,
+          createdAt: serverTimestamp(),
+          uploadedAt: new Date().toISOString(),
+          
+          // Route statistics
+          totalDistance: routeInfo.totalDistance || routeData.totalDistance || 0,
+          elapsedTime: routeInfo.elapsedTime || routeData.elapsedTime || 0,
+          originalDate: routeInfo.date,
+          
+          // Route data
+          routeData: actualRouteData,
+          
+          // Statistics for quick access
+          stats: {
+            locationPoints: actualRouteData.filter(p => p.type === 'location').length,
+            photos: actualRouteData.filter(p => p.type === 'photo').length,
+            notes: actualRouteData.filter(p => p.type === 'text').length,
+            totalDataPoints: actualRouteData.length
+          },
+          
+          // Accessibility information
+          accessibilityData: accessibilityData,
+          
+          // Technical info
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            timestamp: Date.now(),
+            appVersion: '1.0'
+          }
+        };
+      } else {
+        // Old format - spread as-is
+        docData = {
+          ...routeData,
+          userId: user.uid,
+          userDisplayName: user.displayName || 'Anonymous',
+          createdAt: serverTimestamp()
+        };
+        actualRouteData = routeData.routeData || routeData.data || [];
+        routeInfo = { name: routeData.name || 'Untitled Route' };
+        accessibilityData = routeData.accessibilityData;
+      }
 
       const docRef = await addDoc(collection(db, 'routes'), docData);
       console.log('☁️ Route uploaded to cloud:', docRef.id);
+      
+      // Generate trail guide for this route
+      if (actualRouteData && actualRouteData.length > 0) {
+        try {
+          await this.generateAndUploadTrailGuide(docRef.id, actualRouteData, routeInfo, accessibilityData, user);
+        } catch (guideError) {
+          console.warn('Trail guide generation failed:', guideError);
+          // Don't throw - route was saved successfully
+        }
+      }
+      
       return docRef.id;
     } catch (error) {
       console.error('❌ Cloud upload failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate and upload trail guide for a route
+   */
+  async generateAndUploadTrailGuide(routeId, routeData, routeInfo, accessibilityData, user) {
+    try {
+      const { trailGuideGeneratorV2 } = await import('./trailGuideGeneratorV2.js');
+      const { db } = await import('../../firebase-setup.js');
+      const { collection, addDoc, serverTimestamp } = await import(
+        'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
+      );
+
+      // Generate HTML
+      const html = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData || {});
+      
+      // Save to Firestore
+      const guideDoc = {
+        routeId: routeId,
+        userId: user.uid,
+        userEmail: user.email,
+        title: routeInfo.name || 'Trail Guide',
+        html: html,
+        createdAt: serverTimestamp(),
+        accessibilityData: accessibilityData || {},
+        stats: {
+          totalDistance: routeInfo.totalDistance || 0,
+          elapsedTime: routeInfo.elapsedTime || 0,
+          locationPoints: routeData.filter(p => p.type === 'location').length,
+          photos: routeData.filter(p => p.type === 'photo').length
+        }
+      };
+
+      const guideRef = await addDoc(collection(db, 'trail_guides'), guideDoc);
+      console.log('📚 Trail guide uploaded:', guideRef.id);
+      
+      return guideRef.id;
+    } catch (error) {
+      console.error('❌ Trail guide generation failed:', error);
       throw error;
     }
   }
@@ -690,6 +855,20 @@ class OfflineSync {
 
     const formatDate = (ts) => new Date(ts).toLocaleString();
     
+    // Helper to get route name from either format
+    const getRouteName = (r) => {
+      if (r.data?.routeInfo?.name) return r.data.routeInfo.name;
+      if (r.data?.name) return r.data.name;
+      return 'Untitled Route';
+    };
+    
+    // Helper to get route distance
+    const getRouteDistance = (r) => {
+      if (r.data?.routeInfo?.totalDistance) return r.data.routeInfo.totalDistance;
+      if (r.data?.totalDistance) return r.data.totalDistance;
+      return 0;
+    };
+    
     const routeCards = routes.map(r => `
       <div class="pending-item" data-type="route" data-id="${r.localId}" 
            style="background: ${r.status === 'uploaded' ? '#dcfce7' : '#fef3c7'}; 
@@ -702,7 +881,7 @@ class OfflineSync {
           </span>
         </div>
         <div style="font-size: 0.85em; color: #374151; margin-top: 4px;">
-          ${r.data?.name || 'Untitled'} • ${(r.data?.totalDistance || 0).toFixed(2)} km
+          ${getRouteName(r)} • ${getRouteDistance(r).toFixed(2)} km
         </div>
         <div style="font-size: 0.75em; color: #9ca3af; margin-top: 4px;">
           Saved: ${formatDate(r.timestamp)}
