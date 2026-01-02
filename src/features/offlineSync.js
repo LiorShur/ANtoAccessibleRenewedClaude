@@ -618,6 +618,7 @@ class OfflineSync {
         title: routeInfo.name || 'Trail Guide',
         html: html,
         createdAt: serverTimestamp(),
+        isPublic: true,  // Make guides public by default so they appear in listings
         accessibilityData: accessibilityData || {},
         stats: {
           totalDistance: routeInfo.totalDistance || 0,
@@ -648,7 +649,8 @@ class OfflineSync {
         ...guideData,
         userId: user.uid,
         userDisplayName: user.displayName || 'Anonymous',
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        isPublic: guideData.isPublic !== false  // Default to true unless explicitly set to false
       };
 
       const docRef = await addDoc(collection(db, 'trail_guides'), docData);
@@ -1017,12 +1019,12 @@ class OfflineSync {
   async syncAllPending() {
     if (this.syncInProgress) {
       console.log('⚠️ Sync already in progress...');
-      return;
+      return { success: false, reason: 'sync_in_progress' };
     }
 
     if (!this.isOnline) {
       toast.error('No internet connection');
-      return;
+      return { success: false, reason: 'offline' };
     }
 
     this.syncInProgress = true;
@@ -1038,9 +1040,10 @@ class OfflineSync {
       }
 
       if (!user) {
-        console.log('⚠️ No user signed in - skipping auto-sync');
+        console.log('⚠️ No user signed in - cannot sync to cloud');
+        toast.warning('Please sign in to upload routes to cloud');
         this.syncInProgress = false;
-        return;
+        return { success: false, reason: 'not_authenticated' };
       }
 
       const routes = await this.getPendingRoutes();
@@ -1102,10 +1105,13 @@ class OfflineSync {
       
       // Process email queue after sync
       await this.processEmailQueue();
+      
+      return { success: true, uploaded: successCount, failed: failCount };
 
     } catch (error) {
       console.error('Sync error:', error);
-      toast.error('Sync failed');
+      toast.error('Sync failed: ' + error.message);
+      return { success: false, reason: 'error', error: error.message };
     } finally {
       this.syncInProgress = false;
     }
@@ -1162,7 +1168,7 @@ class OfflineSync {
       
     } catch (error) {
       console.error('Upload failed:', error);
-      toast.error('Upload failed');
+      toast.error('Upload failed: ' + (error.message || 'Unknown error'));
     }
   }
 
@@ -1550,6 +1556,63 @@ class OfflineSync {
       toast.success('All items synced! ✓');
     } else {
       toast.warning(`${remaining.total} items still pending`);
+    }
+  }
+
+  /**
+   * Migration utility: Add isPublic field to existing trail guides
+   * Call from browser console: offlineSync.migrateTrailGuides()
+   */
+  async migrateTrailGuides() {
+    try {
+      const { auth, db } = await import('../../firebase-setup.js');
+      const { collection, query, where, getDocs, updateDoc, doc } = await import(
+        'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
+      );
+
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('Please sign in first');
+        toast.error('Please sign in first');
+        return;
+      }
+
+      console.log('🔄 Starting trail guide migration...');
+      toast.info('Migrating trail guides...');
+
+      // Get all trail guides for current user
+      const guidesQuery = query(
+        collection(db, 'trail_guides'),
+        where('userId', '==', user.uid)
+      );
+      
+      const snapshot = await getDocs(guidesQuery);
+      let updated = 0;
+      let skipped = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        
+        // Only update if isPublic is not already set
+        if (data.isPublic === undefined || data.isPublic === null) {
+          await updateDoc(doc(db, 'trail_guides', docSnap.id), {
+            isPublic: true
+          });
+          updated++;
+          console.log(`✅ Updated: ${docSnap.id}`);
+        } else {
+          skipped++;
+        }
+      }
+
+      console.log(`✅ Migration complete: ${updated} updated, ${skipped} already had isPublic`);
+      toast.success(`Migration complete: ${updated} guides updated`);
+      
+      return { updated, skipped };
+    } catch (error) {
+      console.error('Migration failed:', error);
+      toast.error('Migration failed: ' + error.message);
+      throw error;
     }
   }
 }
