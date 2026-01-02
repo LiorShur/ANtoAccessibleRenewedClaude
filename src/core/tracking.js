@@ -41,6 +41,15 @@ async start() {
   this.appState.setStartTime(Date.now());
   // Clear restore handled flag for future sessions
   sessionStorage.removeItem('restore_handled');
+  
+  // Clear previous accessibility data for fresh route
+  localStorage.removeItem('accessibilityData');
+  
+  // Show accessibility survey reminder after a short delay
+  setTimeout(() => {
+    this.showAccessibilitySurveyReminder();
+  }, 3000); // Show after 3 seconds to let user get oriented
+  
 } else {
   // FIXED: Resuming - use more precise timing calculation
   const currentTime = Date.now();
@@ -112,6 +121,267 @@ formatTime(milliseconds) {
   } else {
     return `${seconds}s`;
   }
+}
+
+/**
+ * Show accessibility survey reminder when starting a new route
+ */
+showAccessibilitySurveyReminder() {
+  // Check if survey already has data (maybe from previous interaction)
+  const existingData = localStorage.getItem('accessibilityData');
+  if (existingData) {
+    console.log('Accessibility data already exists, skipping reminder');
+    return;
+  }
+
+  // Create reminder banner
+  const reminder = document.createElement('div');
+  reminder.id = 'accessibility-reminder';
+  reminder.style.cssText = `
+    position: fixed;
+    top: calc(var(--nav-height, 56px) + 130px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 16px;
+    z-index: 9999;
+    max-width: 320px;
+    width: calc(100% - 40px);
+    box-shadow: 0 8px 32px rgba(33, 150, 243, 0.4);
+    animation: slideDown 0.4s ease;
+  `;
+
+  reminder.innerHTML = `
+    <div style="display: flex; align-items: flex-start; gap: 12px;">
+      <div style="font-size: 32px; line-height: 1;">♿</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px;">
+          📋 Accessibility Survey
+        </div>
+        <div style="font-size: 13px; opacity: 0.95; line-height: 1.4;">
+          Help others by documenting this trail's accessibility features as you go!
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; margin-top: 14px;">
+      <button id="open-survey-btn" style="
+        flex: 1;
+        padding: 10px 16px;
+        background: white;
+        color: #1976D2;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+      ">Open Survey</button>
+      <button id="remind-later-btn" style="
+        padding: 10px 16px;
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+      ">Later</button>
+    </div>
+  `;
+
+  // Add animation styles if not present
+  if (!document.getElementById('reminder-animation-style')) {
+    const style = document.createElement('style');
+    style.id = 'reminder-animation-style';
+    style.textContent = `
+      @keyframes slideDown {
+        from { transform: translate(-50%, -20px); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
+      }
+      @keyframes slideUp {
+        from { transform: translate(-50%, 0); opacity: 1; }
+        to { transform: translate(-50%, -20px); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(reminder);
+
+  // Handle button clicks
+  const openBtn = reminder.querySelector('#open-survey-btn');
+  const laterBtn = reminder.querySelector('#remind-later-btn');
+
+  const closeReminder = () => {
+    reminder.style.animation = 'slideUp 0.3s ease forwards';
+    setTimeout(() => reminder.remove(), 300);
+  };
+
+  openBtn.addEventListener('click', () => {
+    closeReminder();
+    // Open the accessibility form
+    if (window.openAccessibilityForm) {
+      window.openAccessibilityForm();
+    }
+  });
+
+  laterBtn.addEventListener('click', () => {
+    closeReminder();
+    // Show a subtle toast reminder
+    toast.info('Tap the ♿ button anytime to fill the survey', { duration: 4000 });
+  });
+
+  // Auto-dismiss after 15 seconds
+  setTimeout(() => {
+    if (document.getElementById('accessibility-reminder')) {
+      closeReminder();
+    }
+  }, 15000);
+}
+
+/**
+ * Prompt user to fill accessibility survey before saving
+ * Returns: 'fill' (open survey), 'skip' (save without), or 'cancel' (abort save)
+ */
+async promptForAccessibilitySurvey() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'survey-prompt-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    `;
+
+    overlay.innerHTML = `
+      <div style="
+        background: white;
+        border-radius: 20px;
+        max-width: 340px;
+        width: calc(100% - 40px);
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        animation: scaleIn 0.3s ease;
+      ">
+        <div style="
+          background: linear-gradient(135deg, #2196F3 0%, #1565C0 100%);
+          padding: 24px 20px;
+          text-align: center;
+        ">
+          <div style="font-size: 48px; margin-bottom: 8px;">♿</div>
+          <h3 style="margin: 0; color: white; font-size: 18px; font-weight: 600;">
+            Accessibility Survey
+          </h3>
+        </div>
+        
+        <div style="padding: 20px;">
+          <p style="margin: 0 0 8px; color: #333; font-size: 15px; line-height: 1.5; text-align: center;">
+            You haven't filled the accessibility survey for this trail yet.
+          </p>
+          <p style="margin: 0 0 20px; color: #666; font-size: 14px; line-height: 1.4; text-align: center;">
+            Your input helps others with mobility challenges discover accessible trails!
+          </p>
+          
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button id="survey-fill-btn" style="
+              width: 100%;
+              padding: 14px 20px;
+              background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+              color: white;
+              border: none;
+              border-radius: 12px;
+              font-size: 15px;
+              font-weight: 600;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+            ">
+              <span style="font-size: 18px;">📋</span>
+              Fill Survey Now
+            </button>
+            
+            <button id="survey-skip-btn" style="
+              width: 100%;
+              padding: 12px 20px;
+              background: #f5f5f5;
+              color: #666;
+              border: none;
+              border-radius: 12px;
+              font-size: 14px;
+              cursor: pointer;
+            ">
+              Skip & Save Without Survey
+            </button>
+            
+            <button id="survey-cancel-btn" style="
+              width: 100%;
+              padding: 10px 20px;
+              background: transparent;
+              color: #999;
+              border: none;
+              font-size: 13px;
+              cursor: pointer;
+            ">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add animations if not present
+    if (!document.getElementById('survey-prompt-animations')) {
+      const style = document.createElement('style');
+      style.id = 'survey-prompt-animations';
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(overlay);
+
+    const cleanup = () => {
+      overlay.remove();
+    };
+
+    overlay.querySelector('#survey-fill-btn').addEventListener('click', () => {
+      cleanup();
+      resolve('fill');
+    });
+
+    overlay.querySelector('#survey-skip-btn').addEventListener('click', () => {
+      cleanup();
+      resolve('skip');
+    });
+
+    overlay.querySelector('#survey-cancel-btn').addEventListener('click', () => {
+      cleanup();
+      resolve('cancel');
+    });
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve('cancel');
+      }
+    });
+  });
 }
 
 // UPDATED: Stop method to preserve elapsed time
@@ -456,8 +726,44 @@ async stop() {
 // FIXED: Save route with proper cloud integration
 // FIXED: Save route with proper cloud integration
 // UPDATED: Save route with public/private choice
-async saveRoute() {
+async saveRoute(skipSurveyPrompt = false) {
   try {
+    // First check if accessibility survey has been completed
+    let accessibilityData = null;
+    try {
+      const storedAccessibilityData = localStorage.getItem('accessibilityData');
+      accessibilityData = storedAccessibilityData ? JSON.parse(storedAccessibilityData) : null;
+    } catch (error) {
+      console.warn('Could not load accessibility data:', error);
+    }
+
+    // If accessibility data is missing and we haven't already prompted, prompt to fill it
+    if (!accessibilityData && !skipSurveyPrompt) {
+      const fillSurvey = await this.promptForAccessibilitySurvey();
+      if (fillSurvey === 'fill') {
+        // User wants to fill survey - open it and wait for completion
+        return new Promise((resolve) => {
+          window.openAccessibilityForm((data) => {
+            // Callback when form is closed/submitted
+            // Continue with save (pass true to skip re-prompting)
+            setTimeout(() => {
+              this.saveRoute(true).then(resolve);
+            }, 500);
+          });
+        });
+      } else if (fillSurvey === 'cancel') {
+        // User cancelled entirely
+        return;
+      }
+      // If 'skip', continue with saving without survey data
+    }
+    
+    // Re-check in case they filled it during the prompt
+    try {
+      const rechecked = localStorage.getItem('accessibilityData');
+      accessibilityData = rechecked ? JSON.parse(rechecked) : null;
+    } catch (e) {}
+
     const defaultName = `Route ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
     
     let routeName = await modal.prompt('Enter a name for this route:', 'Name Your Route', defaultName);
@@ -485,15 +791,6 @@ async saveRoute() {
       elapsedTime: this.appState.getElapsedTime(),
       date: new Date().toISOString()
     };
-    
-    // Get accessibility data
-    let accessibilityData = null;
-    try {
-      const storedAccessibilityData = localStorage.getItem('accessibilityData');
-      accessibilityData = storedAccessibilityData ? JSON.parse(storedAccessibilityData) : null;
-    } catch (error) {
-      console.warn('Could not load accessibility data:', error);
-    }
 
     // Save to local storage first (for route history)
     const savedSession = await this.appState.saveSession(routeName);
