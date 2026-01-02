@@ -162,21 +162,19 @@ class RouteRecovery {
         
         .recovery-btn:active:not(:disabled) {
           transform: scale(0.98);
+          opacity: 0.9;
         }
         
-        .file-input-wrapper {
-          position: relative;
-          overflow: hidden;
+        /* Better touch targets for mobile */
+        .recovery-btn {
+          -webkit-tap-highlight-color: rgba(74, 222, 128, 0.3);
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-user-select: none;
         }
         
-        .file-input-wrapper input[type="file"] {
-          position: absolute;
-          left: 0;
-          top: 0;
-          opacity: 0;
-          width: 100%;
-          height: 100%;
-          cursor: pointer;
+        #recovery-file-input {
+          display: none;
         }
         
         .recovery-info {
@@ -323,12 +321,10 @@ class RouteRecovery {
         <!-- Step 1: Import -->
         <div class="recovery-section">
           <h3>📁 Step 1: Import Route File</h3>
-          <div class="file-input-wrapper">
-            <button class="recovery-btn primary">
-              📂 Select JSON File
-            </button>
-            <input type="file" id="recovery-file-input" accept=".json">
-          </div>
+          <button class="recovery-btn primary" id="select-file-btn">
+            📂 Select JSON File
+          </button>
+          <input type="file" id="recovery-file-input" accept=".json,application/json" />
           <div id="route-preview-container"></div>
         </div>
         
@@ -379,6 +375,12 @@ class RouteRecovery {
     // Setup file input listener
     document.getElementById('recovery-file-input').addEventListener('change', (e) => {
       this.handleFileSelect(e);
+    });
+    
+    // Setup select file button to trigger file input
+    document.getElementById('select-file-btn').addEventListener('click', () => {
+      this.addLog('File picker triggered...', 'info');
+      document.getElementById('recovery-file-input').click();
     });
     
     // Check auth status
