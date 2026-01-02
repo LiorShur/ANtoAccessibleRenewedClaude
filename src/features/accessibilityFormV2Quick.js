@@ -1529,6 +1529,7 @@ export class AccessibilityFormV2Quick {
     toast.success('✅ Accessibility survey saved!');
     
     if (this.currentCallback) {
+      this._callbackCalled = true; // Mark as called so close() doesn't call again
       this.currentCallback(data);
     }
     
@@ -1537,6 +1538,7 @@ export class AccessibilityFormV2Quick {
 
   open(callback) {
     this.currentCallback = callback;
+    this._callbackCalled = false; // Reset flag
     this.currentPhase = 1;
     
     // Load user's mobility profile for pre-filling and category prioritization
@@ -1708,6 +1710,14 @@ export class AccessibilityFormV2Quick {
       
       // Re-enable pull-to-refresh
       document.body.classList.remove('modal-open');
+      
+      // Call callback with null to indicate form was closed without submit
+      // (submit handler calls it with data before closing)
+      if (this.currentCallback && !this._callbackCalled) {
+        this.currentCallback(null);
+      }
+      this._callbackCalled = false;
+      this.currentCallback = null;
     }
   }
 
