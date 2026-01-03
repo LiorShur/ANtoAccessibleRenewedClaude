@@ -1,5 +1,5 @@
 // Authentication controller with beautiful UI
-import { auth, db } from '../../firebase-setup.js';
+import { auth, db, storage } from '../../firebase-setup.js';
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { userService } from '../services/userService.js';
@@ -13,6 +13,7 @@ import {
   signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js";
 
 export class AuthController {
   constructor() {
@@ -629,7 +630,7 @@ async selectRouteForCloudSave(sessions) {
   }
 }
 
-// UPDATED: Enhanced cloud save with better state management
+// UPDATED: Enhanced cloud save with Storage support for large photos
 async saveCurrentRouteToCloud() {
   // Prevent multiple simultaneous saves
   if (this.isSavingToCloud) {
@@ -699,7 +700,7 @@ async saveCurrentRouteToCloud() {
     }
 
     // Show saving indicator
-    this.showCloudSyncIndicator('Saving route to cloud...');
+    this.showCloudSyncIndicator('Preparing route data...');
     console.log('☁️ Starting cloud save process for:', routeInfo.name);
     
     // Get accessibility data if available
@@ -709,6 +710,60 @@ async saveCurrentRouteToCloud() {
       accessibilityData = storedAccessibilityData ? JSON.parse(storedAccessibilityData) : null;
     } catch (error) {
       console.warn('Could not load accessibility data:', error);
+    }
+
+    // Check data size and handle photos if too large
+    let processedRouteData = [...routeDataToSave];
+    const photos = routeDataToSave.filter(p => p.type === 'photo' && p.content);
+    const estimatedSize = JSON.stringify(routeDataToSave).length;
+    
+    console.log(`📊 Route data size: ${Math.round(estimatedSize/1024)} KB, Photos: ${photos.length}`);
+    
+    // If data is large or has multiple photos, upload photos to Storage
+    if (estimatedSize > 700000 || photos.length > 2) {
+      console.log('📸 Route has large photo data, uploading to Firebase Storage...');
+      this.showCloudSyncIndicator('Uploading photos...');
+      
+      const routeId = `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        
+        try {
+          this.showCloudSyncIndicator(`Uploading photo ${i + 1}/${photos.length}...`);
+          
+          // Compress photo first
+          const compressed = await this.compressImageForUpload(photo.content, 800, 0.6);
+          
+          // Upload to Storage
+          const photoRef = ref(storage, `routes/${this.currentUser.uid}/${routeId}/photo_${i}.jpg`);
+          const blob = this.base64ToBlob(compressed);
+          
+          console.log(`📤 Uploading photo ${i + 1} (${Math.round(blob.size/1024)} KB)...`);
+          await uploadBytes(photoRef, blob);
+          const downloadURL = await getDownloadURL(photoRef);
+          
+          // Replace base64 with URL in route data
+          const photoIndex = processedRouteData.findIndex(p => 
+            p.type === 'photo' && p.timestamp === photo.timestamp
+          );
+          
+          if (photoIndex !== -1) {
+            processedRouteData[photoIndex] = {
+              ...processedRouteData[photoIndex],
+              content: downloadURL,
+              storageRef: `routes/${this.currentUser.uid}/${routeId}/photo_${i}.jpg`,
+              isStorageURL: true
+            };
+          }
+          
+          console.log(`✅ Photo ${i + 1} uploaded to Storage`);
+          
+        } catch (photoError) {
+          console.warn(`⚠️ Failed to upload photo ${i + 1}:`, photoError.message);
+          // Continue with other photos, keep original base64 for this one
+        }
+      }
     }
 
     // Prepare route document for Firestore
@@ -724,15 +779,15 @@ async saveCurrentRouteToCloud() {
       elapsedTime: routeInfo.elapsedTime || 0,
       originalDate: routeInfo.date,
       
-      // Route data
-      routeData: routeDataToSave,
+      // Route data (with photos as URLs if uploaded to Storage)
+      routeData: processedRouteData,
       
       // Statistics for quick access
       stats: {
-        locationPoints: routeDataToSave.filter(p => p.type === 'location').length,
-        photos: routeDataToSave.filter(p => p.type === 'photo').length,
-        notes: routeDataToSave.filter(p => p.type === 'text').length,
-        totalDataPoints: routeDataToSave.length
+        locationPoints: processedRouteData.filter(p => p.type === 'location').length,
+        photos: processedRouteData.filter(p => p.type === 'photo').length,
+        notes: processedRouteData.filter(p => p.type === 'text').length,
+        totalDataPoints: processedRouteData.length
       },
       
       // Accessibility information
@@ -746,6 +801,15 @@ async saveCurrentRouteToCloud() {
       }
     };
 
+    // Final size check
+    const finalSize = JSON.stringify(routeDoc).length;
+    console.log(`📊 Final document size: ${Math.round(finalSize/1024)} KB`);
+    
+    if (finalSize > 1000000) {
+      throw new Error(`Route data too large (${Math.round(finalSize/1024)} KB). Try reducing photos.`);
+    }
+
+    this.showCloudSyncIndicator('Saving to Firestore...');
     console.log('📤 Uploading route document to Firestore...');
 
     // Import Firestore functions and save
@@ -767,6 +831,8 @@ async saveCurrentRouteToCloud() {
       this.showAuthError('Permission denied. Please check your Firestore security rules.');
     } else if (error.code === 'quota-exceeded') {
       this.showAuthError('Storage quota exceeded. Please contact support.');
+    } else if (error.message?.includes('size') || error.message?.includes('exceeds')) {
+      this.showAuthError('Route data too large. Try taking fewer or smaller photos.');
     } else if (error.name === 'FirebaseError') {
       this.showAuthError('Firebase error: ' + error.message);
     } else {
@@ -784,6 +850,45 @@ async saveCurrentRouteToCloud() {
       }
     }, 2000);
   }
+}
+
+// Helper: Compress image for upload
+async compressImageForUpload(base64Data, maxWidth = 800, quality = 0.6) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const scale = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      try {
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    img.onerror = () => reject(new Error('Failed to load image for compression'));
+    img.src = base64Data;
+  });
+}
+
+// Helper: Convert base64 to blob
+base64ToBlob(base64) {
+  const parts = base64.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
 }
 
 // UPDATED: Better event listener setup with debouncing
@@ -1216,66 +1321,183 @@ async generateAndStoreTrailGuide(routeId, routeData, routeInfo, accessibilityDat
   try {
     console.log('🌐 Generating trail guide HTML for:', routeInfo.name);
     
-    // Use the new trail guide generator V2
-    const htmlContent = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData);
+    // Check if photos need compression for smaller HTML
+    let processedRouteData = routeData;
+    const photos = routeData.filter(p => p.type === 'photo' && p.content);
     
-    // Create trail guide document
-    const trailGuideDoc = {
-      routeId: routeId,
-      routeName: routeInfo.name,
-      userId: this.currentUser.uid,
-      userEmail: this.currentUser.email,
-      htmlContent: htmlContent,
-      generatedAt: new Date().toISOString(),
-      isPublic: false, // Private by default
+    if (photos.length > 0) {
+      // Estimate total photo size
+      const totalPhotoSize = photos.reduce((sum, p) => sum + (p.content?.length || 0), 0);
+      console.log(`📸 Total photo data in trail guide: ${Math.round(totalPhotoSize/1024)} KB`);
       
-      // Enhanced metadata for search and discovery
-      metadata: {
-        totalDistance: routeInfo.totalDistance || 0,
-        elapsedTime: routeInfo.elapsedTime || 0,
-        originalDate: routeInfo.date,
-        locationCount: routeData.filter(p => p.type === 'location').length,
-        photoCount: routeData.filter(p => p.type === 'photo').length,
-        noteCount: routeData.filter(p => p.type === 'text').length
-      },
-      
-      // Accessibility features for search
-      accessibility: accessibilityData ? {
-        wheelchairAccess: accessibilityData.wheelchairAccess || 'Unknown',
-        trailSurface: accessibilityData.trailSurface || 'Unknown',
-        difficulty: accessibilityData.difficulty || 'Unknown',
-        facilities: accessibilityData.facilities || [],
-        location: accessibilityData.location || 'Unknown'
-      } : null,
-      
-      // Technical info
-      stats: {
-        fileSize: new Blob([htmlContent]).size,
-        version: '1.0',
-        generatedBy: 'Access Nature App'
-      },
-      
-      // Community features (for future)
-      community: {
-        views: 0,
-        downloads: 0,
-        ratings: [],
-        averageRating: 0,
-        reviews: []
+      // If photos are large, compress them for the HTML
+      if (totalPhotoSize > 500000) { // 500KB threshold
+        console.log('🔄 Compressing photos for trail guide...');
+        processedRouteData = await this.compressPhotosForTrailGuide(routeData);
       }
-    };
+    }
     
-    // Import Firestore and save trail guide
-    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
-    const guideRef = await addDoc(collection(db, 'trail_guides'), trailGuideDoc);
+    // Use the new trail guide generator V2
+    const htmlContent = trailGuideGeneratorV2.generateHTML(processedRouteData, routeInfo, accessibilityData);
     
-    console.log('✅ Trail guide generated and stored with ID:', guideRef.id);
+    // Check final HTML size
+    const htmlSize = new Blob([htmlContent]).size;
+    console.log(`📊 Trail guide HTML size: ${Math.round(htmlSize/1024)} KB`);
+    
+    if (htmlSize > 900000) {
+      console.warn('⚠️ Trail guide HTML is large, may exceed Firestore limit');
+      // Try even more aggressive compression
+      if (photos.length > 0) {
+        console.log('🔄 Applying aggressive compression...');
+        const veryCompressedData = await this.compressPhotosForTrailGuide(routeData, 500, 0.4);
+        const smallerHtml = trailGuideGeneratorV2.generateHTML(veryCompressedData, routeInfo, accessibilityData);
+        const newSize = new Blob([smallerHtml]).size;
+        
+        if (newSize < 900000) {
+          console.log(`✅ Aggressive compression reduced to ${Math.round(newSize/1024)} KB`);
+          // Continue with smaller HTML
+          return await this.saveTrailGuideDoc(routeId, routeInfo, accessibilityData, smallerHtml, veryCompressedData);
+        }
+      }
+      
+      // Still too large - save without HTML, just metadata
+      console.warn('⚠️ Trail guide too large, saving metadata only');
+      return await this.saveTrailGuideMetadataOnly(routeId, routeInfo, accessibilityData, processedRouteData);
+    }
+    
+    // Save the complete trail guide
+    return await this.saveTrailGuideDoc(routeId, routeInfo, accessibilityData, htmlContent, processedRouteData);
     
   } catch (error) {
     console.error('❌ Failed to generate trail guide:', error);
     // Don't fail the main save if HTML generation fails
     this.showCloudSyncIndicator('Route saved, trail guide generation failed');
   }
+}
+
+// Helper: Compress photos for trail guide
+async compressPhotosForTrailGuide(routeData, maxWidth = 600, quality = 0.5) {
+  const processedData = [];
+  
+  for (const point of routeData) {
+    if (point.type === 'photo' && point.content && !point.isStorageURL) {
+      try {
+        const compressed = await this.compressImageForUpload(point.content, maxWidth, quality);
+        processedData.push({
+          ...point,
+          content: compressed
+        });
+      } catch (e) {
+        // Keep original if compression fails
+        processedData.push(point);
+      }
+    } else {
+      processedData.push(point);
+    }
+  }
+  
+  return processedData;
+}
+
+// Helper: Save trail guide document
+async saveTrailGuideDoc(routeId, routeInfo, accessibilityData, htmlContent, routeData) {
+  const trailGuideDoc = {
+    routeId: routeId,
+    routeName: routeInfo.name,
+    userId: this.currentUser.uid,
+    userEmail: this.currentUser.email,
+    htmlContent: htmlContent,
+    generatedAt: new Date().toISOString(),
+    isPublic: false,
+    
+    metadata: {
+      totalDistance: routeInfo.totalDistance || 0,
+      elapsedTime: routeInfo.elapsedTime || 0,
+      originalDate: routeInfo.date,
+      locationCount: routeData.filter(p => p.type === 'location').length,
+      photoCount: routeData.filter(p => p.type === 'photo').length,
+      noteCount: routeData.filter(p => p.type === 'text').length
+    },
+    
+    accessibility: accessibilityData ? {
+      wheelchairAccess: accessibilityData.wheelchairAccess || 'Unknown',
+      trailSurface: accessibilityData.trailSurface || 'Unknown',
+      difficulty: accessibilityData.difficulty || 'Unknown',
+      facilities: accessibilityData.facilities || [],
+      location: accessibilityData.location || 'Unknown'
+    } : null,
+    
+    stats: {
+      fileSize: new Blob([htmlContent]).size,
+      version: '1.0',
+      generatedBy: 'Access Nature App'
+    },
+    
+    community: {
+      views: 0,
+      downloads: 0,
+      ratings: [],
+      averageRating: 0,
+      reviews: []
+    }
+  };
+  
+  const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+  const guideRef = await addDoc(collection(db, 'trail_guides'), trailGuideDoc);
+  
+  console.log('✅ Trail guide generated and stored with ID:', guideRef.id);
+  return guideRef.id;
+}
+
+// Helper: Save only metadata when HTML is too large
+async saveTrailGuideMetadataOnly(routeId, routeInfo, accessibilityData, routeData) {
+  const trailGuideDoc = {
+    routeId: routeId,
+    routeName: routeInfo.name,
+    userId: this.currentUser.uid,
+    userEmail: this.currentUser.email,
+    htmlContent: null, // Not stored due to size
+    htmlTooLarge: true,
+    generatedAt: new Date().toISOString(),
+    isPublic: false,
+    
+    metadata: {
+      totalDistance: routeInfo.totalDistance || 0,
+      elapsedTime: routeInfo.elapsedTime || 0,
+      originalDate: routeInfo.date,
+      locationCount: routeData.filter(p => p.type === 'location').length,
+      photoCount: routeData.filter(p => p.type === 'photo').length,
+      noteCount: routeData.filter(p => p.type === 'text').length
+    },
+    
+    accessibility: accessibilityData ? {
+      wheelchairAccess: accessibilityData.wheelchairAccess || 'Unknown',
+      trailSurface: accessibilityData.trailSurface || 'Unknown',
+      difficulty: accessibilityData.difficulty || 'Unknown',
+      facilities: accessibilityData.facilities || [],
+      location: accessibilityData.location || 'Unknown'
+    } : null,
+    
+    stats: {
+      version: '1.0',
+      generatedBy: 'Access Nature App',
+      note: 'HTML not stored due to size limit'
+    },
+    
+    community: {
+      views: 0,
+      downloads: 0,
+      ratings: [],
+      averageRating: 0,
+      reviews: []
+    }
+  };
+  
+  const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
+  const guideRef = await addDoc(collection(db, 'trail_guides'), trailGuideDoc);
+  
+  console.log('✅ Trail guide metadata stored (HTML too large) with ID:', guideRef.id);
+  return guideRef.id;
 }
 
 // NEW: Make trail guide public/private
