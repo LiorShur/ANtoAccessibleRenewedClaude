@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Nature - Route Recovery</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-dark: #1b5e20;
+            --surface: #ffffff;
+            --background: #f5f7f5;
+            --text: #1a1a1a;
+            --text-muted: #666;
+            --border: #e0e0e0;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --error: #f44336;
+            --info: #2196f3;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .auth-status.signed-out {
+            background: #fff3e0;
+            border: 1px solid #ffcc80;
+        }
+        
+        .auth-status.signed-in {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .file-drop {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .file-drop:hover, .file-drop.dragover {
+            border-color: var(--primary);
+            background: #e8f5e9;
+        }
+        
+        .file-drop input {
+            display: none;
+        }
+        
+        .file-info {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        
+        .file-info h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .log-container {
+            background: #1a1a1a;
+            color: #00ff00;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        
+        .log-entry {
+            margin: 4px 0;
+            padding: 2px 0;
+        }
+        
+        .log-entry.info { color: #64b5f6; }
+        .log-entry.success { color: #81c784; }
+        .log-entry.warning { color: #ffb74d; }
+        .log-entry.error { color: #e57373; }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 4px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .photo-preview img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        
+        .photo-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        
+        .size-warning {
+            color: var(--error);
+            font-weight: 500;
+        }
+        
+        .size-ok {
+            color: var(--success);
+        }
+        
+        .compression-info {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            font-size: 0.9rem;
+        }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Route Recovery Tool</h1>
+        <p class="subtitle">Upload route JSON files and sync them to your cloud account</p>
+        
+        <!-- Auth Status -->
+        <div class="card">
+            <h2>🔐 Authentication</h2>
+            <div id="authStatus" class="auth-status signed-out">
+                <span id="authIcon">⚠️</span>
+                <span id="authText">Not signed in - sign in required to upload</span>
+            </div>
+            <button id="signInBtn" class="btn btn-primary">Sign In with Google</button>
+            <button id="signOutBtn" class="btn btn-secondary hidden">Sign Out</button>
+        </div>
+        
+        <!-- File Upload -->
+        <div class="card">
+            <h2>📁 Select Route File</h2>
+            <div class="file-drop" id="fileDrop">
+                <input type="file" id="fileInput" accept=".json">
+                <p>📂 Click or drag a route JSON file here</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;">
+                    Supports exported route files (route-*.json)
+                </p>
+            </div>
+            
+            <div id="fileInfo" class="file-info hidden">
+                <h3 id="routeName">Route Name</h3>
+                <p id="routeDate" style="color: var(--text-muted); font-size: 0.9rem;"></p>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statPoints">0</div>
+                        <div class="stat-label">GPS Points</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statPhotos">0</div>
+                        <div class="stat-label">Photos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statNotes">0</div>
+                        <div class="stat-label">Notes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statDistance">0</div>
+                        <div class="stat-label">km</div>
+                    </div>
+                </div>
+                
+                <div id="photoPreviewContainer" class="hidden">
+                    <h4 style="margin-top: 16px; font-size: 0.95rem;">📷 Photos</h4>
+                    <div id="photoPreview" class="photo-preview"></div>
+                </div>
+                
+                <div id="compressionInfo" class="compression-info hidden">
+                    <strong>⚡ Compression needed:</strong> 
+                    <span id="compressionDetails"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card" id="actionsCard">
+            <h2>⚡ Actions</h2>
+            <div class="actions">
+                <button id="uploadRouteBtn" class="btn btn-primary" disabled>
+                    ☁️ Upload Route to Cloud
+                </button>
+                <button id="generateGuideBtn" class="btn btn-secondary" disabled>
+                    📋 Generate Trail Guide
+                </button>
+            </div>
+            
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <!-- Log Output -->
+        <div class="card">
+            <h2>📝 Activity Log</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry info">[Ready] Recovery panel initialized</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js";
+        
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
+            authDomain: "accessnaturebeta-821a2.firebaseapp.com",
+            projectId: "accessnaturebeta-821a2",
+            storageBucket: "accessnaturebeta-821a2.appspot.com",
+            messagingSenderId: "670888101781",
+            appId: "1:670888101781:web:b4cf57f58e86182466589c"
+        };
+        
+        // Initialize Firebase
+        let app;
+        if (getApps().length === 0) {
+            app = initializeApp(firebaseConfig);
+        } else {
+            app = getApp();
+        }
+        
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const googleProvider = new GoogleAuthProvider();
+        
+        // State
+        let currentUser = null;
+        let parsedRoute = null;
+        let originalPhotos = [];
+        
+        // DOM Elements
+        const authStatus = document.getElementById('authStatus');
+        const authIcon = document.getElementById('authIcon');
+        const authText = document.getElementById('authText');
+        const signInBtn = document.getElementById('signInBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const fileDrop = document.getElementById('fileDrop');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadRouteBtn = document.getElementById('uploadRouteBtn');
+        const generateGuideBtn = document.getElementById('generateGuideBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const logContainer = document.getElementById('logContainer');
+        
+        // Logging
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${time}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function setProgress(percent) {
+            progressBar.style.display = 'block';
+            progressFill.style.width = `${percent}%`;
+        }
+        
+        // Auth handlers
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                authStatus.className = 'auth-status signed-in';
+                authIcon.textContent = '✅';
+                authText.textContent = `Signed in as ${user.email}`;
+                signInBtn.classList.add('hidden');
+                signOutBtn.classList.remove('hidden');
+                log(`Signed in as ${user.email}`, 'success');
+                updateButtonStates();
+            } else {
+                authStatus.className = 'auth-status signed-out';
+                authIcon.textContent = '⚠️';
+                authText.textContent = 'Not signed in - sign in required to upload';
+                signInBtn.classList.remove('hidden');
+                signOutBtn.classList.add('hidden');
+                log('Not authenticated - sign in required', 'warning');
+                updateButtonStates();
+            }
+        });
+        
+        signInBtn.addEventListener('click', async () => {
+            try {
+                log('Starting Google sign-in...');
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                log(`Sign-in failed: ${error.message}`, 'error');
+            }
+        });
+        
+        signOutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                log('Signed out', 'info');
+            } catch (error) {
+                log(`Sign-out failed: ${error.message}`, 'error');
+            }
+        });
+        
+        // File handling
+        fileDrop.addEventListener('click', () => fileInput.click());
+        fileDrop.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDrop.classList.add('dragover');
+        });
+        fileDrop.addEventListener('dragleave', () => {
+            fileDrop.classList.remove('dragover');
+        });
+        fileDrop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDrop.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+        
+        async function handleFile(file) {
+            log(`Selected file: ${file.name}`);
+            
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                
+                // Parse route data - handle different formats
+                parsedRoute = parseRouteData(data, file.name);
+                
+                if (!parsedRoute) {
+                    log('Could not parse route data from file', 'error');
+                    return;
+                }
+                
+                displayRouteInfo(parsedRoute);
+                log(`Parsed route: ${parsedRoute.name}`, 'success');
+                log(`GPS points: ${parsedRoute.stats.locationPoints}`);
+                log(`Photos: ${parsedRoute.stats.photos}`);
+                log(`Distance: ${parsedRoute.stats.distance.toFixed(2)} km`);
+                
+                updateButtonStates();
+                
+            } catch (error) {
+                log(`Failed to parse file: ${error.message}`, 'error');
+            }
+        }
+        
+        function parseRouteData(data, filename) {
+            let routeData, routeInfo, accessibilityData;
+            
+            // Handle different export formats
+            if (data.routeData && Array.isArray(data.routeData)) {
+                // Full export format with metadata
+                routeData = data.routeData;
+                routeInfo = {
+                    name: data.routeName || data.name || filename.replace('.json', ''),
+                    date: data.createdAt || data.date || new Date().toISOString(),
+                    totalDistance: data.totalDistance || 0,
+                    elapsedTime: data.elapsedTime || 0
+                };
+                accessibilityData = data.accessibilityData || null;
+            } else if (Array.isArray(data)) {
+                // Raw array format
+                routeData = data;
+                routeInfo = {
+                    name: filename.replace('.json', ''),
+                    date: new Date().toISOString(),
+                    totalDistance: 0,
+                    elapsedTime: 0
+                };
+                accessibilityData = null;
+            } else if (data.data && Array.isArray(data.data)) {
+                // Session format
+                routeData = data.data;
+                routeInfo = {
+                    name: data.name || filename.replace('.json', ''),
+                    date: data.date || new Date().toISOString(),
+                    totalDistance: data.totalDistance || 0,
+                    elapsedTime: data.elapsedTime || 0
+                };
+                accessibilityData = data.accessibilityData || null;
+            } else {
+                return null;
+            }
+            
+            // Calculate stats
+            const locationPoints = routeData.filter(p => p.type === 'location');
+            const photos = routeData.filter(p => p.type === 'photo');
+            const notes = routeData.filter(p => p.type === 'text');
+            
+            // Store original photos for later
+            originalPhotos = photos;
+            
+            // Calculate distance if not provided
+            let distance = routeInfo.totalDistance;
+            if (!distance && locationPoints.length > 1) {
+                distance = calculateDistance(locationPoints);
+            }
+            
+            // Calculate total data size
+            const jsonSize = JSON.stringify(routeData).length;
+            let photoSize = 0;
+            photos.forEach(p => {
+                if (p.content) {
+                    photoSize += p.content.length;
+                }
+            });
+            
+            return {
+                routeData,
+                routeInfo,
+                accessibilityData,
+                stats: {
+                    locationPoints: locationPoints.length,
+                    photos: photos.length,
+                    notes: notes.length,
+                    distance: distance / 1000, // Convert to km
+                    totalSize: jsonSize,
+                    photoSize: photoSize,
+                    needsCompression: jsonSize > 900000 // Near 1MB limit
+                }
+            };
+        }
+        
+        function calculateDistance(points) {
+            let total = 0;
+            for (let i = 1; i < points.length; i++) {
+                const p1 = points[i - 1].coords;
+                const p2 = points[i].coords;
+                total += haversine(p1.lat, p1.lng, p2.lat, p2.lng);
+            }
+            return total;
+        }
+        
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth's radius in meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function displayRouteInfo(route) {
+            fileInfo.classList.remove('hidden');
+            
+            document.getElementById('routeName').textContent = route.routeInfo.name;
+            document.getElementById('routeDate').textContent = new Date(route.routeInfo.date).toLocaleString();
+            document.getElementById('statPoints').textContent = route.stats.locationPoints;
+            document.getElementById('statPhotos').textContent = route.stats.photos;
+            document.getElementById('statNotes').textContent = route.stats.notes;
+            document.getElementById('statDistance').textContent = route.stats.distance.toFixed(2);
+            
+            // Show photo previews
+            const previewContainer = document.getElementById('photoPreviewContainer');
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+            
+            if (originalPhotos.length > 0) {
+                previewContainer.classList.remove('hidden');
+                
+                originalPhotos.forEach((photo, i) => {
+                    const div = document.createElement('div');
+                    const img = document.createElement('img');
+                    img.src = photo.content;
+                    
+                    const sizeKB = Math.round(photo.content.length / 1024);
+                    const sizeText = document.createElement('div');
+                    sizeText.className = 'photo-size ' + (sizeKB > 150 ? 'size-warning' : 'size-ok');
+                    sizeText.textContent = `${sizeKB} KB`;
+                    
+                    div.appendChild(img);
+                    div.appendChild(sizeText);
+                    preview.appendChild(div);
+                });
+            }
+            
+            // Show compression info if needed
+            const compressionInfo = document.getElementById('compressionInfo');
+            const compressionDetails = document.getElementById('compressionDetails');
+            
+            const totalSizeKB = Math.round(route.stats.totalSize / 1024);
+            const photoSizeKB = Math.round(route.stats.photoSize / 1024);
+            
+            if (totalSizeKB > 900) {
+                compressionInfo.classList.remove('hidden');
+                compressionDetails.textContent = `Total size: ${totalSizeKB} KB (${photoSizeKB} KB photos). ` +
+                    `Photos will be uploaded to Storage separately to stay under Firestore's 1MB limit.`;
+            } else {
+                compressionInfo.classList.add('hidden');
+            }
+        }
+        
+        function updateButtonStates() {
+            const canUpload = currentUser && parsedRoute;
+            uploadRouteBtn.disabled = !canUpload;
+            generateGuideBtn.disabled = !parsedRoute;
+        }
+        
+        // Compress image using canvas
+        async function compressImage(base64Data, maxWidth = 800, quality = 0.6) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const scale = Math.min(1, maxWidth / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    try {
+                        const compressed = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressed);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = base64Data;
+            });
+        }
+        
+        // Convert base64 to blob for storage upload
+        function base64ToBlob(base64) {
+            const parts = base64.split(',');
+            const mime = parts[0].match(/:(.*?);/)[1];
+            const bstr = atob(parts[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+        
+        // Upload route to cloud
+        uploadRouteBtn.addEventListener('click', async () => {
+            if (!currentUser || !parsedRoute) return;
+            
+            uploadRouteBtn.disabled = true;
+            log('Starting upload process...');
+            setProgress(5);
+            
+            try {
+                const { routeData, routeInfo, accessibilityData, stats } = parsedRoute;
+                
+                // Determine if we need to upload photos to Storage
+                const totalSize = stats.totalSize;
+                const useStorage = totalSize > 800000 || stats.photos > 3; // Use Storage for large routes
+                
+                let processedRouteData = [...routeData];
+                
+                if (useStorage && originalPhotos.length > 0) {
+                    log(`Uploading ${originalPhotos.length} photos to Firebase Storage...`);
+                    
+                    const routeId = `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    for (let i = 0; i < originalPhotos.length; i++) {
+                        const photo = originalPhotos[i];
+                        const progress = 10 + (i / originalPhotos.length) * 50;
+                        setProgress(progress);
+                        
+                        try {
+                            // Compress the photo first
+                            log(`Compressing photo ${i + 1}/${originalPhotos.length}...`);
+                            const compressed = await compressImage(photo.content, 800, 0.6);
+                            
+                            // Upload to Storage
+                            const photoRef = ref(storage, `routes/${currentUser.uid}/${routeId}/photo_${i}.jpg`);
+                            const blob = base64ToBlob(compressed);
+                            
+                            log(`Uploading photo ${i + 1}/${originalPhotos.length} (${Math.round(blob.size/1024)} KB)...`);
+                            await uploadBytes(photoRef, blob);
+                            const downloadURL = await getDownloadURL(photoRef);
+                            
+                            // Replace base64 with URL in route data
+                            const photoIndex = processedRouteData.findIndex(p => 
+                                p.type === 'photo' && p.timestamp === photo.timestamp
+                            );
+                            
+                            if (photoIndex !== -1) {
+                                processedRouteData[photoIndex] = {
+                                    ...processedRouteData[photoIndex],
+                                    content: downloadURL,
+                                    storageRef: `routes/${currentUser.uid}/${routeId}/photo_${i}.jpg`,
+                                    isStorageURL: true
+                                };
+                            }
+                            
+                            log(`Photo ${i + 1} uploaded successfully`, 'success');
+                            
+                        } catch (photoError) {
+                            log(`Failed to upload photo ${i + 1}: ${photoError.message}`, 'warning');
+                            // Continue with other photos
+                        }
+                    }
+                } else if (originalPhotos.length > 0) {
+                    // Compress photos but keep as base64
+                    log('Compressing photos for inline storage...');
+                    
+                    for (let i = 0; i < originalPhotos.length; i++) {
+                        const photo = originalPhotos[i];
+                        
+                        try {
+                            const compressed = await compressImage(photo.content, 800, 0.6);
+                            
+                            const photoIndex = processedRouteData.findIndex(p => 
+                                p.type === 'photo' && p.timestamp === photo.timestamp
+                            );
+                            
+                            if (photoIndex !== -1) {
+                                processedRouteData[photoIndex] = {
+                                    ...processedRouteData[photoIndex],
+                                    content: compressed
+                                };
+                            }
+                        } catch (error) {
+                            log(`Failed to compress photo ${i + 1}`, 'warning');
+                        }
+                    }
+                }
+                
+                setProgress(70);
+                log('Saving route document to Firestore...');
+                
+                // Prepare the document
+                const routeDoc = {
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    routeName: routeInfo.name,
+                    createdAt: routeInfo.date,
+                    uploadedAt: new Date().toISOString(),
+                    recoveredAt: new Date().toISOString(),
+                    
+                    totalDistance: routeInfo.totalDistance || stats.distance * 1000,
+                    elapsedTime: routeInfo.elapsedTime || 0,
+                    originalDate: routeInfo.date,
+                    
+                    routeData: processedRouteData,
+                    
+                    stats: {
+                        locationPoints: stats.locationPoints,
+                        photos: stats.photos,
+                        notes: stats.notes,
+                        totalDataPoints: processedRouteData.length
+                    },
+                    
+                    accessibilityData: accessibilityData,
+                    
+                    deviceInfo: {
+                        source: 'recovery-tool',
+                        timestamp: Date.now(),
+                        appVersion: '1.0'
+                    }
+                };
+                
+                // Check final size
+                const finalSize = JSON.stringify(routeDoc).length;
+                log(`Final document size: ${Math.round(finalSize/1024)} KB`);
+                
+                if (finalSize > 1000000) {
+                    throw new Error(`Document still too large (${Math.round(finalSize/1024)} KB). Please reduce photo count or quality.`);
+                }
+                
+                setProgress(85);
+                
+                const docRef = await addDoc(collection(db, 'routes'), routeDoc);
+                
+                setProgress(100);
+                log(`✅ Route saved successfully! ID: ${docRef.id}`, 'success');
+                log(`Route "${routeInfo.name}" is now in your cloud account`, 'success');
+                
+                // Reset progress after delay
+                setTimeout(() => {
+                    progressBar.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 2000);
+                
+            } catch (error) {
+                log(`❌ Upload failed: ${error.message}`, 'error');
+                setProgress(0);
+                progressBar.style.display = 'none';
+            } finally {
+                uploadRouteBtn.disabled = false;
+            }
+        });
+        
+        // Generate trail guide
+        generateGuideBtn.addEventListener('click', async () => {
+            if (!parsedRoute) return;
+            
+            log('Generating trail guide...');
+            
+            try {
+                const { routeData, routeInfo, accessibilityData, stats } = parsedRoute;
+                
+                // For trail guide, we need to compress photos to keep HTML under size limits
+                let processedPhotos = [];
+                
+                for (const photo of originalPhotos) {
+                    try {
+                        const compressed = await compressImage(photo.content, 600, 0.5);
+                        processedPhotos.push({
+                            ...photo,
+                            content: compressed
+                        });
+                    } catch (e) {
+                        processedPhotos.push(photo);
+                    }
+                }
+                
+                // Build simple trail guide HTML
+                const guideHTML = generateTrailGuideHTML(
+                    routeData.map(p => {
+                        if (p.type === 'photo') {
+                            const compressed = processedPhotos.find(cp => cp.timestamp === p.timestamp);
+                            return compressed || p;
+                        }
+                        return p;
+                    }),
+                    routeInfo,
+                    accessibilityData
+                );
+                
+                // Check size
+                const sizeKB = Math.round(guideHTML.length / 1024);
+                log(`Trail guide generated: ${sizeKB} KB`);
+                
+                if (sizeKB > 1000) {
+                    log('Trail guide too large, further compression needed', 'warning');
+                }
+                
+                // Download the HTML
+                const blob = new Blob([guideHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `trail-guide-${routeInfo.name.replace(/[^a-z0-9]/gi, '-')}.html`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                log('Trail guide downloaded!', 'success');
+                
+            } catch (error) {
+                log(`❌ Guide generation failed: ${error.message}`, 'error');
+            }
+        });
+        
+        function generateTrailGuideHTML(routeData, routeInfo, accessibilityData) {
+            const locationPoints = routeData.filter(p => p.type === 'location');
+            const photos = routeData.filter(p => p.type === 'photo');
+            const notes = routeData.filter(p => p.type === 'text');
+            
+            const date = new Date(routeInfo.date).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            let photosHTML = '';
+            photos.forEach((photo, i) => {
+                photosHTML += `
+                    <div class="photo-item">
+                        <img src="${photo.content}" alt="Trail photo ${i + 1}">
+                        <div class="photo-time">${new Date(photo.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                `;
+            });
+            
+            let notesHTML = '';
+            notes.forEach((note) => {
+                notesHTML += `
+                    <div class="note-item">
+                        <span class="note-time">${new Date(note.timestamp).toLocaleTimeString()}</span>
+                        <span class="note-text">${note.content}</span>
+                    </div>
+                `;
+            });
+            
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${routeInfo.name} - Trail Guide</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7f5; color: #1a1a1a; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: #2e7d32; color: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; }
+        .header h1 { font-size: 1.5rem; margin-bottom: 8px; }
+        .header p { opacity: 0.9; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 1.1rem; margin-bottom: 16px; color: #2e7d32; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+        .stat { text-align: center; padding: 12px; background: #f5f7f5; border-radius: 8px; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #2e7d32; }
+        .stat-label { font-size: 0.85rem; color: #666; }
+        .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .photo-item { border-radius: 8px; overflow: hidden; }
+        .photo-item img { width: 100%; height: 150px; object-fit: cover; }
+        .photo-time { padding: 8px; background: #f5f5f5; font-size: 0.85rem; color: #666; }
+        .note-item { padding: 12px; background: #fff9c4; border-radius: 8px; margin-bottom: 8px; }
+        .note-time { font-size: 0.8rem; color: #666; display: block; margin-bottom: 4px; }
+        .note-text { line-height: 1.5; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌲 ${routeInfo.name}</h1>
+            <p>Documented on ${date}</p>
+        </div>
+        
+        <div class="card">
+            <h2>📊 Route Statistics</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">${(routeInfo.totalDistance / 1000).toFixed(2)}</div>
+                    <div class="stat-label">km</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${locationPoints.length}</div>
+                    <div class="stat-label">GPS Points</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${photos.length}</div>
+                    <div class="stat-label">Photos</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${notes.length}</div>
+                    <div class="stat-label">Notes</div>
+                </div>
+            </div>
+        </div>
+        
+        ${photos.length > 0 ? `
+        <div class="card">
+            <h2>📷 Photos</h2>
+            <div class="photos">
+                ${photosHTML}
+            </div>
+        </div>
+        ` : ''}
+        
+        ${notes.length > 0 ? `
+        <div class="card">
+            <h2>📝 Notes</h2>
+            ${notesHTML}
+        </div>
+        ` : ''}
+        
+        <div class="footer">
+            <p>Generated by Access Nature Recovery Tool</p>
+        </div>
+    </div>
+</body>
+</html>`;
+        }
+        
+        log('Recovery panel ready');
+    </script>
+</body>
+</html>
