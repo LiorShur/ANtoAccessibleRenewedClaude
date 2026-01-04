@@ -537,6 +537,11 @@ class OfflineSync {
         accessibilityData = routeData.accessibilityData;
       }
       
+      // Mark prepare stage as done
+      if (onProgress) {
+        onProgress('prepare-done', null, 10);
+      }
+      
       // Upload photos to Storage if needed
       let processedRouteData = actualRouteData;
       let storageRouteId = null;
@@ -714,7 +719,7 @@ class OfflineSync {
   async uploadGuideToCloud(guideData, user) {
     try {
       const { db } = await import('../../firebase-setup.js');
-      const { collection, addDoc, serverTimestamp } = await import(
+      const { collection, addDoc } = await import(
         'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
       );
 
@@ -722,7 +727,7 @@ class OfflineSync {
         ...guideData,
         userId: user.uid,
         userDisplayName: user.displayName || 'Anonymous',
-        createdAt: serverTimestamp(),
+        generatedAt: new Date().toISOString(),  // Changed from createdAt with serverTimestamp
         isPublic: guideData.isPublic !== false  // Default to true unless explicitly set to false
       };
 
@@ -1250,7 +1255,10 @@ class OfflineSync {
       uploadProgress.setProgress(5);
       
       const cloudId = await this.uploadRouteToCloud(route.data, user, (stage, detail, progress) => {
-        if (stage === 'photos') {
+        if (stage === 'prepare-done') {
+          uploadProgress.setStageCompleted('prepare');
+          uploadProgress.setProgress(progress);
+        } else if (stage === 'photos') {
           uploadProgress.setStageActive('photos', detail);
           uploadProgress.setProgress(progress);
           uploadProgress.setStatus(`Uploading photo ${detail}...`);
