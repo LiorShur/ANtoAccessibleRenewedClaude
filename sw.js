@@ -9,7 +9,7 @@
  * - Images: Cache First
  */
 
-const CACHE_VERSION = 'v2.3.1-ghpages';
+const CACHE_VERSION = 'v2.5.0-upload-progress';
 const APP_CACHE = `access-nature-app-${CACHE_VERSION}`;
 const DATA_CACHE = `access-nature-data-${CACHE_VERSION}`;
 const MAP_CACHE = `access-nature-maps-${CACHE_VERSION}`;
@@ -65,6 +65,7 @@ const APP_SHELL = [
   './src/ui/gamificationUI.js',
   './src/ui/displayPreferences.js',
   './src/ui/mobilityProfileUI.js',
+  './src/ui/uploadProgress.js',
   
   // PWA
   './src/pwa/pwaManager.js',
@@ -72,6 +73,7 @@ const APP_SHELL = [
   
   // Services & Config
   './src/services/userService.js',
+  './src/services/storageService.js',
   './src/config/featureFlags.js',
   
   // External Libraries (CDN - will be cached on first use)

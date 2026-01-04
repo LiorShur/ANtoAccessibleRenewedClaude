@@ -150,13 +150,19 @@ class StorageService {
 
   /**
    * Upload all photos in route data to Storage and replace base64 with URLs
+   * Uses parallel uploads for efficiency
    * @param {Array} routeData - Route data array with photo entries
    * @param {string} userId - User ID
    * @param {string} routeId - Route ID (use timestamp if new route)
-   * @param {function} onProgress - Progress callback (photoIndex, totalPhotos)
-   * @returns {Promise<Array>} Updated route data with photo URLs
+   * @param {function} onProgress - Progress callback (current, total, photoIndex)
+   * @returns {Promise<Object>} Updated route data with photo URLs
    */
   async uploadRoutePhotos(routeData, userId, routeId = null, onProgress = null) {
+    // Check network status first
+    if (!navigator.onLine) {
+      throw new Error('Cannot upload photos while offline');
+    }
+    
     // Generate route ID if not provided
     const finalRouteId = routeId || `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -172,60 +178,94 @@ class StorageService {
       return { routeData, routeId: finalRouteId, photosUploaded: 0 };
     }
 
-    console.log(`📸 Uploading ${photos.length} photos to Storage...`);
+    console.log(`📸 Uploading ${photos.length} photos to Storage (parallel)...`);
     
     // Create a copy of route data to modify
     const processedRouteData = [...routeData];
-    let uploadedCount = 0;
+    let completedCount = 0;
     let totalSize = 0;
-
-    for (let i = 0; i < photos.length; i++) {
-      const photo = photos[i];
+    
+    // Parallel upload with concurrency limit
+    const CONCURRENT_UPLOADS = 3; // Upload 3 at a time
+    const results = [];
+    
+    // Process photos in batches
+    for (let i = 0; i < photos.length; i += CONCURRENT_UPLOADS) {
+      const batch = photos.slice(i, i + CONCURRENT_UPLOADS);
       
-      try {
-        // Report progress
-        if (onProgress) {
-          onProgress(i + 1, photos.length);
-        }
-
-        // Generate storage path
-        const storagePath = `routes/${userId}/${finalRouteId}/photo_${i}.jpg`;
+      const batchPromises = batch.map(async (photo, batchIndex) => {
+        const photoIndex = i + batchIndex;
+        const storagePath = `routes/${userId}/${finalRouteId}/photo_${photoIndex}.jpg`;
         
-        // Upload photo
-        const result = await this.uploadPhoto(photo.content, storagePath, true);
-        
-        // Find and update the photo in route data
-        const photoIndex = processedRouteData.findIndex(p => 
-          p.type === 'photo' && p.timestamp === photo.timestamp
-        );
-        
-        if (photoIndex !== -1) {
-          processedRouteData[photoIndex] = {
-            ...processedRouteData[photoIndex],
-            content: result.url,
-            storageRef: result.ref,
-            isStorageURL: true,
-            originalSize: photo.content.length,
-            compressedSize: result.size
+        try {
+          // Compress the photo
+          const compressed = await this.compressImage(photo.content);
+          
+          // Upload to Storage
+          const result = await this.uploadPhoto(compressed, storagePath, false); // Already compressed
+          
+          // Update progress
+          completedCount++;
+          if (onProgress) {
+            onProgress(completedCount, photos.length, photoIndex);
+          }
+          
+          return {
+            success: true,
+            photoIndex,
+            timestamp: photo.timestamp,
+            url: result.url,
+            ref: result.ref,
+            size: result.size
+          };
+        } catch (error) {
+          console.warn(`⚠️ Failed to upload photo ${photoIndex + 1}:`, error.message);
+          completedCount++;
+          if (onProgress) {
+            onProgress(completedCount, photos.length, photoIndex);
+          }
+          return {
+            success: false,
+            photoIndex,
+            timestamp: photo.timestamp,
+            error: error.message
           };
         }
-        
-        uploadedCount++;
-        totalSize += result.size;
-        
-      } catch (error) {
-        console.warn(`⚠️ Failed to upload photo ${i + 1}:`, error.message);
-        // Keep original base64 if upload fails
-      }
+      });
+      
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
     }
-
+    
+    // Update route data with successful uploads
+    results.forEach(result => {
+      if (result.success) {
+        const photoDataIndex = processedRouteData.findIndex(p => 
+          p.type === 'photo' && p.timestamp === result.timestamp
+        );
+        
+        if (photoDataIndex !== -1) {
+          processedRouteData[photoDataIndex] = {
+            ...processedRouteData[photoDataIndex],
+            content: result.url,
+            storageRef: result.ref,
+            isStorageURL: true
+          };
+          totalSize += result.size;
+        }
+      }
+    });
+    
+    const uploadedCount = results.filter(r => r.success).length;
     console.log(`✅ Uploaded ${uploadedCount}/${photos.length} photos (${Math.round(totalSize/1024)} KB total)`);
     
     return {
       routeData: processedRouteData,
       routeId: finalRouteId,
       photosUploaded: uploadedCount,
-      totalSize
+      totalSize,
+      failedCount: photos.length - uploadedCount
     };
   }
 
@@ -286,6 +326,16 @@ class StorageService {
     const sizeInfo = this.calculateRouteSize(routeData);
     
     console.log(`📊 Route size: ${Math.round(sizeInfo.totalSize/1024)} KB, Photos needing upload: ${sizeInfo.photosNeedingUpload}`);
+    
+    // Check if online - if offline, just compress inline (don't try Storage upload)
+    if (!navigator.onLine) {
+      console.log('📴 Offline - skipping Storage upload, compressing inline only');
+      if (sizeInfo.photosNeedingUpload > 0) {
+        const processedData = await this.compressInlinePhotos(routeData);
+        return { routeData: processedData, routeId: null, photosUploaded: 0 };
+      }
+      return { routeData, routeId: null, photosUploaded: 0 };
+    }
     
     if (sizeInfo.needsStorage) {
       console.log('📸 Route needs Storage upload for photos...');

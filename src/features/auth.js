@@ -4,6 +4,7 @@ import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { userService } from '../services/userService.js';
 import { storageService } from '../services/storageService.js';
+import { uploadProgress } from '../ui/uploadProgress.js';
 import { trailGuideGeneratorV2 } from './trailGuideGeneratorV2.js';
 import {
   signInWithEmailAndPassword,
@@ -636,7 +637,7 @@ async saveCurrentRouteToCloud() {
   // Prevent multiple simultaneous saves
   if (this.isSavingToCloud) {
     console.log('⏳ Cloud save already in progress...');
-    this.showCloudSyncIndicator('Save already in progress...');
+    toast.info('Save already in progress...');
     return;
   }
 
@@ -661,6 +662,7 @@ async saveCurrentRouteToCloud() {
       
       if (!savedSessions || savedSessions.length === 0) {
         toast.info('No route data available. Record a route first, then save to cloud.');
+        this.isSavingToCloud = false;
         return;
       }
       
@@ -670,6 +672,7 @@ async saveCurrentRouteToCloud() {
       const selectedRoute = await this.selectRouteForCloudSave(savedSessions);
       if (!selectedRoute) {
         console.log('No route selected, cancelling cloud save');
+        this.isSavingToCloud = false;
         return;
       }
       
@@ -684,6 +687,7 @@ async saveCurrentRouteToCloud() {
       const routeName = await modal.prompt('Enter a name for this route:', '☁️ Save to Cloud');
       if (!routeName) {
         console.log('No route name provided, cancelling save');
+        this.isSavingToCloud = false;
         return;
       }
       
@@ -697,12 +701,30 @@ async saveCurrentRouteToCloud() {
 
     if (!routeDataToSave || routeDataToSave.length === 0) {
       toast.warning('No valid route data to save to cloud');
+      this.isSavingToCloud = false;
       return;
     }
 
-    // Show saving indicator
-    this.showCloudSyncIndicator('Preparing route data...');
     console.log('☁️ Starting cloud save process for:', routeInfo.name);
+    
+    // Count photos to determine stages
+    const photoCount = routeDataToSave.filter(p => p.type === 'photo' && p.content).length;
+    const hasPhotos = photoCount > 0;
+    
+    // Define upload stages
+    const stages = [
+      { id: 'prepare', label: 'Preparing route data' },
+      ...(hasPhotos ? [{ id: 'photos', label: `Uploading photos (${photoCount})` }] : []),
+      { id: 'route', label: 'Saving route to cloud' }
+    ];
+    
+    // Show upload progress modal
+    uploadProgress.show('Uploading to Cloud', stages);
+    
+    // Stage 1: Prepare
+    uploadProgress.setStageActive('prepare');
+    uploadProgress.setProgress(5);
+    uploadProgress.setStatus('Preparing route data...');
     
     // Get accessibility data if available
     let accessibilityData = null;
@@ -712,19 +734,44 @@ async saveCurrentRouteToCloud() {
     } catch (error) {
       console.warn('Could not load accessibility data:', error);
     }
-
-    // Use storageService to upload photos to Storage if needed
-    const { routeData: processedRouteData, routeId, photosUploaded } = await storageService.prepareRouteForSave(
-      routeDataToSave,
-      this.currentUser.uid,
-      (current, total) => {
-        this.showCloudSyncIndicator(`Uploading photo ${current}/${total}...`);
-      }
-    );
     
-    if (photosUploaded > 0) {
-      console.log(`📸 Uploaded ${photosUploaded} photos to Storage`);
+    uploadProgress.setStageCompleted('prepare');
+    uploadProgress.setProgress(10);
+
+    // Stage 2: Upload photos (if any)
+    let processedRouteData = routeDataToSave;
+    let routeId = null;
+    let photosUploaded = 0;
+    
+    if (hasPhotos) {
+      uploadProgress.setStageActive('photos', `0/${photoCount}`);
+      uploadProgress.setStatus('Uploading photos...');
+      
+      const result = await storageService.prepareRouteForSave(
+        routeDataToSave,
+        this.currentUser.uid,
+        (current, total) => {
+          uploadProgress.updatePhotoProgress(current, total, 10, 50);
+        }
+      );
+      
+      processedRouteData = result.routeData;
+      routeId = result.routeId;
+      photosUploaded = result.photosUploaded;
+      
+      if (photosUploaded > 0) {
+        uploadProgress.setStageCompleted('photos', `${photosUploaded} uploaded`);
+        console.log(`📸 Uploaded ${photosUploaded} photos to Storage`);
+      } else {
+        uploadProgress.setStageCompleted('photos', 'compressed');
+      }
     }
+    
+    uploadProgress.setProgress(65);
+
+    // Stage 3: Save route document
+    uploadProgress.setStageActive('route');
+    uploadProgress.setStatus('Saving route to Firestore...');
 
     // Prepare route document for Firestore
     const routeDoc = {
@@ -773,7 +820,6 @@ async saveCurrentRouteToCloud() {
       throw new Error(`Route data too large (${Math.round(finalSize/1024)} KB). Try reducing photos.`);
     }
 
-    this.showCloudSyncIndicator('Saving to Firestore...');
     console.log('📤 Uploading route document to Firestore...');
 
     // Import Firestore functions and save
@@ -782,7 +828,13 @@ async saveCurrentRouteToCloud() {
     const docRef = await addDoc(collection(db, 'routes'), routeDoc);
     
     console.log('✅ Route saved to cloud successfully with ID:', docRef.id);
-    this.showSuccessMessage(`✅ "${routeInfo.name}" saved to cloud successfully! ☁️`);
+    
+    uploadProgress.setStageCompleted('route', docRef.id.slice(0, 8) + '...');
+    uploadProgress.setProgress(100);
+    
+    // Show success
+    uploadProgress.showSuccess(`"${routeInfo.name}" saved successfully!`);
+    uploadProgress.hide(2000);
     
     // Update user stats (optional)
     await this.updateUserStats();
@@ -790,29 +842,25 @@ async saveCurrentRouteToCloud() {
   } catch (error) {
     console.error('❌ Failed to save route to cloud:', error);
     
+    // Show error in modal
+    uploadProgress.showError(error.message);
+    uploadProgress.hide(3000);
+    
     // More specific error messages
     if (error.code === 'permission-denied') {
-      this.showAuthError('Permission denied. Please check your Firestore security rules.');
+      toast.error('Permission denied. Please check your Firestore security rules.');
     } else if (error.code === 'quota-exceeded') {
-      this.showAuthError('Storage quota exceeded. Please contact support.');
+      toast.error('Storage quota exceeded. Please contact support.');
     } else if (error.message?.includes('size') || error.message?.includes('exceeds')) {
-      this.showAuthError('Route data too large. Try taking fewer or smaller photos.');
+      toast.error('Route data too large. Try taking fewer or smaller photos.');
     } else if (error.name === 'FirebaseError') {
-      this.showAuthError('Firebase error: ' + error.message);
+      toast.error('Firebase error: ' + error.message);
     } else {
-      this.showAuthError('Failed to save route to cloud: ' + error.message);
+      toast.error('Failed to save route to cloud: ' + error.message);
     }
   } finally {
     // Always reset the saving flag
     this.isSavingToCloud = false;
-    
-    // Hide sync indicator after a delay
-    setTimeout(() => {
-      const indicator = document.getElementById('cloudSyncIndicator');
-      if (indicator) {
-        indicator.classList.add('hidden');
-      }
-    }, 2000);
   }
 }
 

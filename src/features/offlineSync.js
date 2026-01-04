@@ -13,6 +13,7 @@
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { storageService } from '../services/storageService.js';
+import { uploadProgress } from '../ui/uploadProgress.js';
 
 // Settings storage key (shared with admin.html)
 const SETTINGS_KEY = 'accessNature_adminSettings';
@@ -511,7 +512,7 @@ class OfflineSync {
 
   // ==================== Cloud Upload ====================
 
-  async uploadRouteToCloud(routeData, user) {
+  async uploadRouteToCloud(routeData, user, onProgress = null) {
     try {
       const { db } = await import('../../firebase-setup.js');
       const { collection, addDoc, serverTimestamp } = await import(
@@ -542,6 +543,8 @@ class OfflineSync {
       let photosUploaded = 0;
       
       const sizeInfo = storageService.calculateRouteSize(actualRouteData);
+      const photoCount = actualRouteData.filter(p => p.type === 'photo' && p.content).length;
+      
       if (sizeInfo.needsStorage) {
         console.log('📸 Uploading photos to Storage...');
         const result = await storageService.uploadRoutePhotos(
@@ -550,11 +553,29 @@ class OfflineSync {
           null,
           (current, total) => {
             console.log(`Uploading photo ${current}/${total}...`);
+            if (onProgress) {
+              const photoProgress = 10 + (current / total) * 50;
+              onProgress('photos', `${current}/${total}`, photoProgress);
+            }
           }
         );
         processedRouteData = result.routeData;
         storageRouteId = result.routeId;
         photosUploaded = result.photosUploaded;
+        
+        if (onProgress) {
+          onProgress('photos-done', `${photosUploaded} uploaded`);
+        }
+      } else if (photoCount > 0) {
+        // Photos compressed inline
+        if (onProgress) {
+          onProgress('photos-done', 'compressed');
+        }
+      }
+      
+      // Report route save stage
+      if (onProgress) {
+        onProgress('route', null, 65);
       }
       
       docData = {
@@ -599,10 +620,18 @@ class OfflineSync {
       const docRef = await addDoc(collection(db, 'routes'), docData);
       console.log('☁️ Route uploaded to cloud:', docRef.id);
       
+      if (onProgress) {
+        onProgress('route-done', docRef.id.slice(0, 8) + '...');
+        onProgress('guide', null, 80);
+      }
+      
       // Generate trail guide for this route
       if (processedRouteData && processedRouteData.length > 0) {
         try {
           await this.generateAndUploadTrailGuide(docRef.id, processedRouteData, routeInfo, accessibilityData, user);
+          if (onProgress) {
+            onProgress('guide-done');
+          }
         } catch (guideError) {
           console.warn('Trail guide generation failed:', guideError);
           // Don't throw - route was saved successfully
@@ -1177,17 +1206,64 @@ class OfflineSync {
         return;
       }
 
-      toast.info('Uploading...');
-      const cloudId = await this.uploadRouteToCloud(route.data, user);
-      await this.markRouteUploaded(localId, cloudId);
-      toast.success('Route uploaded! ☁️');
+      // Get route info for display
+      const routeName = route.data?.routeInfo?.name || route.data?.name || 'Route';
+      const routeDataArray = route.data?.routeData || route.data?.data || [];
+      const photoCount = routeDataArray.filter(p => p.type === 'photo' && p.content).length;
+      const hasPhotos = photoCount > 0;
       
-      // Refresh modal
-      document.getElementById('pending-uploads-modal')?.remove();
-      this.showPendingUploadsModal();
+      // Define upload stages
+      const stages = [
+        { id: 'prepare', label: 'Preparing route data' },
+        ...(hasPhotos ? [{ id: 'photos', label: `Uploading photos (${photoCount})` }] : []),
+        { id: 'route', label: 'Saving route to cloud' },
+        { id: 'guide', label: 'Generating trail guide' }
+      ];
+      
+      // Show progress modal
+      uploadProgress.show('Uploading to Cloud', stages);
+      uploadProgress.setStageActive('prepare');
+      uploadProgress.setProgress(5);
+      
+      const cloudId = await this.uploadRouteToCloud(route.data, user, (stage, detail, progress) => {
+        if (stage === 'photos') {
+          uploadProgress.setStageActive('photos', detail);
+          uploadProgress.setProgress(progress);
+          uploadProgress.setStatus(`Uploading photo ${detail}...`);
+        } else if (stage === 'photos-done') {
+          uploadProgress.setStageCompleted('photos', detail);
+        } else if (stage === 'route') {
+          uploadProgress.setStageActive('route');
+          uploadProgress.setProgress(progress);
+          uploadProgress.setStatus('Saving to Firestore...');
+        } else if (stage === 'route-done') {
+          uploadProgress.setStageCompleted('route', detail);
+        } else if (stage === 'guide') {
+          uploadProgress.setStageActive('guide');
+          uploadProgress.setProgress(progress);
+          uploadProgress.setStatus('Generating trail guide...');
+        } else if (stage === 'guide-done') {
+          uploadProgress.setStageCompleted('guide');
+        }
+      });
+      
+      await this.markRouteUploaded(localId, cloudId);
+      
+      // Show success
+      uploadProgress.setProgress(100);
+      uploadProgress.showSuccess(`"${routeName}" uploaded successfully!`);
+      uploadProgress.hide(2000);
+      
+      // Refresh modal after delay
+      setTimeout(() => {
+        document.getElementById('pending-uploads-modal')?.remove();
+        this.showPendingUploadsModal();
+      }, 2100);
       
     } catch (error) {
       console.error('Upload failed:', error);
+      uploadProgress.showError(error.message || 'Upload failed');
+      uploadProgress.hide(3000);
       toast.error('Upload failed: ' + (error.message || 'Unknown error'));
     }
   }

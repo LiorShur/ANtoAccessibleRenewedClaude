@@ -4,6 +4,7 @@ import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { userService } from '../services/userService.js';
 import { storageService } from '../services/storageService.js';
+import { uploadProgress } from '../ui/uploadProgress.js';
 import { trailGuideGeneratorV2 } from '../features/trailGuideGeneratorV2.js';
 import { getElevation } from '../utils/geolocation.js';
 
@@ -982,6 +983,21 @@ async generateTrailGuide(routeId, routeData, routeInfo, accessibilityData, authC
 
 // NEW: Save route to cloud (separate method)
 async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) {
+  // Count photos to determine stages
+  const photoCount = routeData.filter(p => p.type === 'photo' && p.content).length;
+  const hasPhotos = photoCount > 0;
+  
+  // Define upload stages
+  const stages = [
+    { id: 'prepare', label: 'Preparing route data' },
+    ...(hasPhotos ? [{ id: 'photos', label: `Uploading photos (${photoCount})` }] : []),
+    { id: 'route', label: 'Saving route to cloud' },
+    { id: 'guide', label: 'Generating trail guide' }
+  ];
+  
+  // Show upload progress modal
+  uploadProgress.show('Uploading to Cloud', stages);
+  
   try {
     // Check network connectivity first
     if (!navigator.onLine) {
@@ -989,6 +1005,11 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
     }
     
     console.log('☁️ Saving route to cloud...');
+    
+    // Stage 1: Prepare
+    uploadProgress.setStageActive('prepare');
+    uploadProgress.setProgress(5);
+    uploadProgress.setStatus('Preparing route data...');
     
     // Import Firestore functions
     const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js");
@@ -999,20 +1020,43 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
       throw new Error('User not authenticated');
     }
     
-    // Upload photos to Storage if needed
-    toast.info('Preparing route data...', { duration: 2000 });
+    uploadProgress.setStageCompleted('prepare');
+    uploadProgress.setProgress(10);
     
-    const { routeData: processedRouteData, routeId, photosUploaded } = await storageService.prepareRouteForSave(
-      routeData,
-      user.uid,
-      (current, total) => {
-        toast.info(`Uploading photo ${current}/${total}...`, { duration: 1500 });
+    // Stage 2: Upload photos (if any)
+    let processedRouteData = routeData;
+    let routeId = null;
+    let photosUploaded = 0;
+    
+    if (hasPhotos) {
+      uploadProgress.setStageActive('photos', `0/${photoCount}`);
+      uploadProgress.setStatus('Uploading photos...');
+      
+      const result = await storageService.prepareRouteForSave(
+        routeData,
+        user.uid,
+        (current, total) => {
+          uploadProgress.updatePhotoProgress(current, total, 10, 50);
+        }
+      );
+      
+      processedRouteData = result.routeData;
+      routeId = result.routeId;
+      photosUploaded = result.photosUploaded;
+      
+      if (photosUploaded > 0) {
+        uploadProgress.setStageCompleted('photos', `${photosUploaded} uploaded`);
+        console.log(`📸 Uploaded ${photosUploaded} photos to Storage`);
+      } else {
+        uploadProgress.setStageCompleted('photos', 'compressed');
       }
-    );
-    
-    if (photosUploaded > 0) {
-      console.log(`📸 Uploaded ${photosUploaded} photos to Storage`);
     }
+    
+    uploadProgress.setProgress(65);
+    
+    // Stage 3: Save route document
+    uploadProgress.setStageActive('route');
+    uploadProgress.setStatus('Saving route to Firestore...');
     
     // Prepare route document for Firestore
     const routeDoc = {
@@ -1062,7 +1106,6 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
     }
 
     // Save route to cloud with timeout
-    toast.info('Saving to cloud...', { duration: 2000 });
     const savePromise = addDoc(collection(db, 'routes'), routeDoc);
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Cloud save timed out')), 30000)
@@ -1071,15 +1114,30 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
     const docRef = await Promise.race([savePromise, timeoutPromise]);
     console.log('✅ Route saved to cloud with ID:', docRef.id);
     
-    // Generate trail guide HTML
+    uploadProgress.setStageCompleted('route', docRef.id.slice(0, 8) + '...');
+    uploadProgress.setProgress(80);
+    
+    // Stage 4: Generate trail guide
+    uploadProgress.setStageActive('guide');
+    uploadProgress.setStatus('Generating trail guide...');
+    
     await this.generateTrailGuide(docRef.id, processedRouteData, routeInfo, accessibilityData, authController);
     
-    this.showSuccessMessage(`✅ "${routeInfo.name}" saved to cloud with trail guide! ☁️`);
+    uploadProgress.setStageCompleted('guide');
+    uploadProgress.setProgress(100);
+    
+    // Show success
+    uploadProgress.showSuccess(`"${routeInfo.name}" saved successfully!`);
+    uploadProgress.hide(2000);
     
     return docRef.id;
     
   } catch (error) {
     console.error('❌ Cloud save failed:', error);
+    
+    // Show error in modal
+    uploadProgress.showError(error.message);
+    uploadProgress.hide(3000);
     
     // Check if it's a network-related error
     const isNetworkError = !navigator.onLine || 
