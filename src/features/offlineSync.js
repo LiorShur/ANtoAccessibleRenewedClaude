@@ -657,23 +657,47 @@ class OfflineSync {
       );
 
       // Generate HTML
-      const html = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData || {});
+      const htmlContent = trailGuideGeneratorV2.generateHTML(routeData, routeInfo, accessibilityData || {});
       
-      // Save to Firestore
+      // Save to Firestore with correct field names
       const guideDoc = {
         routeId: routeId,
+        routeName: routeInfo.name || 'Trail Guide',
         userId: user.uid,
         userEmail: user.email,
-        title: routeInfo.name || 'Trail Guide',
-        html: html,
-        createdAt: serverTimestamp(),
-        isPublic: true,  // Make guides public by default so they appear in listings
-        accessibilityData: accessibilityData || {},
-        stats: {
+        htmlContent: htmlContent,  // Changed from 'html'
+        generatedAt: new Date().toISOString(),  // Changed from 'createdAt'
+        isPublic: true,
+        
+        metadata: {
           totalDistance: routeInfo.totalDistance || 0,
           elapsedTime: routeInfo.elapsedTime || 0,
-          locationPoints: routeData.filter(p => p.type === 'location').length,
-          photos: routeData.filter(p => p.type === 'photo').length
+          originalDate: routeInfo.date,
+          locationCount: routeData.filter(p => p.type === 'location').length,
+          photoCount: routeData.filter(p => p.type === 'photo').length,
+          noteCount: routeData.filter(p => p.type === 'text').length
+        },
+        
+        accessibility: accessibilityData ? {
+          wheelchairAccess: accessibilityData.wheelchairAccess || 'Unknown',
+          trailSurface: accessibilityData.trailSurface || 'Unknown',
+          difficulty: accessibilityData.difficulty || 'Unknown',
+          facilities: accessibilityData.facilities || [],
+          location: accessibilityData.location || 'Unknown'
+        } : null,
+        
+        stats: {
+          fileSize: new Blob([htmlContent]).size,
+          version: '1.0',
+          generatedBy: 'Access Nature App'
+        },
+        
+        community: {
+          views: 0,
+          downloads: 0,
+          ratings: [],
+          averageRating: 0,
+          reviews: []
         }
       };
 
