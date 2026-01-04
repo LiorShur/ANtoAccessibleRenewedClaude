@@ -50,4 +50,8 @@ export async function copyToClipboard(text) {
       document.body.removeChild(textArea);
       return true;
     }
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    return false;
   }
+}
