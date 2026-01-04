@@ -1,654 +1,487 @@
 /**
- * Access Nature - Service Worker
- * Handles offline caching, background sync, and push notifications
+ * Upload Progress Modal
  * 
- * Cache Strategy:
- * - App Shell: Cache First (HTML, CSS, JS)
- * - API/Firebase: Network First with Cache Fallback
- * - Map Tiles: Cache First with Network Fallback
- * - Images: Cache First
+ * Shows a beautiful modal with upload animation, progress bar,
+ * and detailed status during cloud saves.
  */
 
-const CACHE_VERSION = 'v2.6.0-duplicate-fix';
-const APP_CACHE = `access-nature-app-${CACHE_VERSION}`;
-const DATA_CACHE = `access-nature-data-${CACHE_VERSION}`;
-const MAP_CACHE = `access-nature-maps-${CACHE_VERSION}`;
-const IMAGE_CACHE = `access-nature-images-${CACHE_VERSION}`;
-
-// App Shell - files to cache immediately (relative paths for GitHub Pages compatibility)
-const APP_SHELL = [
-  './',
-  './index.html',
-  './tracker.html',
-  './reports.html',
-  './manifest.json',
-  
-  // CSS
-  './src/css/base.css',
-  './src/css/layout.css',
-  './src/css/components.css',
-  './src/css/accessibility.css',
-  './src/css/themes.css',
-  './src/css/auth.css',
-  './src/css/landing.css',
-  './src/css/high-contrast.css',
-  './src/css/ui-utilities.css',
-  
-  // Core JS
-  './firebase-setup.js',
-  './src/main.js',
-  './src/landing.js',
-  
-  // Features
-  './src/features/auth.js',
-  './src/core/tracking.js',
-  './src/features/accessibility.js',
-  './src/features/export.js',
-  './src/features/media.js',
-  './src/features/safetyFeatures.js',
-  './src/features/trailConditions.js',
-  './src/features/trailAlerts.js',
-  './src/features/offlineSync.js',
-  './src/features/trailSearch.js',
-  './src/features/accessibilityRating.js',
-  './src/features/accessibilityFormV2Quick.js',
-  './src/features/trailGuideGeneratorV2.js',
-  
-  // Utils
-  './src/utils/modal.js',
-  './src/utils/toast.js',
-  './src/utils/errorMessages.js',
-  
-  // UI
-  './src/ui/offlineIndicator.js',
-  './src/ui/loadingStates.js',
-  './src/ui/gamificationUI.js',
-  './src/ui/displayPreferences.js',
-  './src/ui/mobilityProfileUI.js',
-  './src/ui/uploadProgress.js',
-  
-  // PWA
-  './src/pwa/pwaManager.js',
-  './src/pwa/offlineMapsUI.js',
-  
-  // Services & Config
-  './src/services/userService.js',
-  './src/services/storageService.js',
-  './src/config/featureFlags.js',
-  
-  // External Libraries (CDN - will be cached on first use)
-  'https://unpkg.com/leaflet@1.9.3/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.3/dist/leaflet.js'
-];
-
-// Tile server patterns to cache
-const TILE_PATTERNS = [
-  /^https:\/\/[abc]\.tile\.openstreetmap\.org/,
-  /^https:\/\/tiles\.stadiamaps\.com/,
-  /^https:\/\/[abc]\.basemaps\.cartocdn\.com/
-];
-
-// Firebase patterns (network first)
-const FIREBASE_PATTERNS = [
-  /^https:\/\/firestore\.googleapis\.com/,
-  /^https:\/\/www\.gstatic\.com\/firebasejs/,
-  /^https:\/\/identitytoolkit\.googleapis\.com/,
-  /^https:\/\/securetoken\.googleapis\.com/
-];
-
-// ==================== Install Event ====================
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker...');
-  
-  // Get the base URL from the service worker's location
-  // This handles subdirectory deployments like GitHub Pages
-  const swUrl = new URL(self.location);
-  const baseUrl = swUrl.href.replace(/sw\.js$/, '');
-  
-  console.log('[SW] Base URL:', baseUrl);
-  
-  event.waitUntil(
-    caches.open(APP_CACHE)
-      .then((cache) => {
-        console.log('[SW] Caching App Shell');
-        // Cache what we can, don't fail on missing files
-        return Promise.allSettled(
-          APP_SHELL.map(url => {
-            // Resolve relative URLs against the SW's base URL
-            // External URLs (https://) are kept as-is
-            const fullUrl = url.startsWith('http') ? url : new URL(url, baseUrl).href;
-            
-            return cache.add(fullUrl).catch(err => {
-              console.warn(`[SW] Failed to cache: ${fullUrl}`, err.message || err);
-            });
-          })
-        );
-      })
-      .then(() => {
-        console.log('[SW] App Shell cached - waiting for activation');
-        // DON'T call skipWaiting() here - this was causing infinite update loops
-        // The SW will wait until all tabs are closed, or user explicitly triggers update
-      })
-  );
-});
-
-// ==================== Activate Event ====================
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating Service Worker...');
-  
-  event.waitUntil(
-    // Clean up old caches
-    caches.keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames
-            .filter((name) => {
-              return name.startsWith('access-nature-') && 
-                     name !== APP_CACHE && 
-                     name !== DATA_CACHE && 
-                     name !== MAP_CACHE &&
-                     name !== IMAGE_CACHE;
-            })
-            .map((name) => {
-              console.log('[SW] Deleting old cache:', name);
-              return caches.delete(name);
-            })
-        );
-      })
-      .then(() => {
-        console.log('[SW] Service Worker activated');
-        return self.clients.claim(); // Take control immediately
-      })
-  );
-});
-
-// ==================== Fetch Event ====================
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-  
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
+class UploadProgressModal {
+  constructor() {
+    this.modal = null;
+    this.isVisible = false;
+    this.currentProgress = 0;
+    this.stages = [];
+    this.currentStage = 0;
   }
-  
-  // Skip chrome-extension and other non-http(s) requests
-  if (!url.protocol.startsWith('http')) {
-    return;
-  }
-  
-  // Determine caching strategy based on request type
-  if (isMapTile(url)) {
-    event.respondWith(cacheFirstWithNetwork(request, MAP_CACHE));
-  } else if (isFirebaseRequest(url)) {
-    event.respondWith(networkFirstWithCache(request, DATA_CACHE));
-  } else if (isImageRequest(request)) {
-    event.respondWith(cacheFirstWithNetwork(request, IMAGE_CACHE));
-  } else if (isAppShellRequest(url)) {
-    event.respondWith(cacheFirstWithNetwork(request, APP_CACHE));
-  } else {
-    // Default: Network first with cache fallback
-    event.respondWith(networkFirstWithCache(request, DATA_CACHE));
-  }
-});
 
-// ==================== Caching Strategies ====================
+  /**
+   * Create the modal DOM element
+   */
+  createModal() {
+    if (this.modal) return;
 
-/**
- * Cache First with Network Fallback
- * Best for: App shell, static assets, map tiles
- */
-async function cacheFirstWithNetwork(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cachedResponse = await cache.match(request);
-  
-  if (cachedResponse) {
-    // Return cached version, but update cache in background
-    updateCacheInBackground(request, cache);
-    return cachedResponse;
-  }
-  
-  try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      // Clone and cache the response
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.warn('[SW] Network request failed:', request.url);
-    
-    // Return offline fallback for navigation requests
-    if (request.mode === 'navigate') {
-      return caches.match('/offline.html') || createOfflineResponse();
-    }
-    
-    return createOfflineResponse();
-  }
-}
-
-/**
- * Network First with Cache Fallback
- * Best for: API requests, dynamic data
- */
-async function networkFirstWithCache(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
-  try {
-    const networkResponse = await fetch(request);
-    
-    // Only cache successful, cacheable responses (not streaming, not opaque)
-    if (networkResponse.ok && 
-        networkResponse.type !== 'opaque' && 
-        !request.url.includes('firestore.googleapis.com') &&
-        !request.url.includes('/Listen/channel')) {
-      try {
-        cache.put(request, networkResponse.clone());
-      } catch (cacheError) {
-        // Silently fail for non-cacheable responses
-        console.debug('[SW] Could not cache:', request.url.slice(0, 60));
-      }
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.warn('[SW] Network failed, trying cache:', request.url);
-    
-    const cachedResponse = await cache.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // Return offline response
-    return createOfflineResponse();
-  }
-}
-
-/**
- * Update cache in background (stale-while-revalidate)
- */
-async function updateCacheInBackground(request, cache) {
-  try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-  } catch (error) {
-    // Silently fail - we already have cached version
-  }
-}
-
-/**
- * Create offline response
- */
-function createOfflineResponse() {
-  return new Response(
-    JSON.stringify({ 
-      error: 'offline', 
-      message: 'You are currently offline' 
-    }),
-    {
-      status: 503,
-      statusText: 'Service Unavailable',
-      headers: { 'Content-Type': 'application/json' }
-    }
-  );
-}
-
-// ==================== Request Type Detection ====================
-
-function isMapTile(url) {
-  return TILE_PATTERNS.some(pattern => pattern.test(url.href));
-}
-
-function isFirebaseRequest(url) {
-  return FIREBASE_PATTERNS.some(pattern => pattern.test(url.href));
-}
-
-function isImageRequest(request) {
-  const acceptHeader = request.headers.get('Accept') || '';
-  return acceptHeader.includes('image') || 
-         /\.(png|jpg|jpeg|gif|webp|svg|ico)$/i.test(request.url);
-}
-
-function isAppShellRequest(url) {
-  // Check if it's a local request (same origin)
-  if (url.origin !== self.location.origin) {
-    return false;
-  }
-  
-  // Get the base path of the service worker
-  const swBasePath = self.location.pathname.replace(/sw\.js$/, '');
-  
-  // Check if the request path is within our app's scope
-  return APP_SHELL.some(path => {
-    // Remove ./ prefix if present
-    const cleanPath = path.replace(/^\.\//, '');
-    const fullPath = swBasePath + cleanPath;
-    
-    return url.pathname === fullPath || 
-           url.pathname === '/' + cleanPath ||
-           url.pathname.endsWith('/' + cleanPath);
-  });
-}
-
-// ==================== Background Sync ====================
-
-self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync event:', event.tag);
-  
-  if (event.tag === 'sync-routes') {
-    event.waitUntil(syncPendingRoutes());
-  } else if (event.tag === 'sync-reports') {
-    event.waitUntil(syncPendingReports());
-  } else if (event.tag === 'sync-guides') {
-    event.waitUntil(syncPendingGuides());
-  }
-});
-
-/**
- * Sync pending routes to Firebase
- */
-async function syncPendingRoutes() {
-  try {
-    const pendingRoutes = await getPendingData('pending-routes');
-    
-    for (const route of pendingRoutes) {
-      try {
-        // This would call Firebase - simplified for demo
-        console.log('[SW] Syncing route:', route.id);
-        await removePendingData('pending-routes', route.id);
+    this.modal = document.createElement('div');
+    this.modal.id = 'uploadProgressModal';
+    this.modal.className = 'upload-progress-modal';
+    this.modal.innerHTML = `
+      <div class="upload-progress-backdrop"></div>
+      <div class="upload-progress-content">
+        <div class="upload-progress-header">
+          <div class="upload-progress-icon">
+            <svg class="upload-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 16v-8m0 0l-3 3m3-3l3 3"/>
+              <path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/>
+            </svg>
+            <div class="upload-pulse"></div>
+          </div>
+          <h3 class="upload-progress-title">Uploading to Cloud</h3>
+        </div>
         
-        // Notify client of successful sync
-        notifyClients({
-          type: 'SYNC_SUCCESS',
-          data: { type: 'route', id: route.id }
-        });
-      } catch (error) {
-        console.error('[SW] Failed to sync route:', error);
-      }
-    }
-  } catch (error) {
-    console.error('[SW] Background sync failed:', error);
-  }
-}
-
-/**
- * Sync pending reports to Firebase
- */
-async function syncPendingReports() {
-  try {
-    const pendingReports = await getPendingData('pending-reports');
-    
-    for (const report of pendingReports) {
-      try {
-        console.log('[SW] Syncing report:', report.id);
-        await removePendingData('pending-reports', report.id);
+        <div class="upload-progress-bar-container">
+          <div class="upload-progress-bar">
+            <div class="upload-progress-fill" id="uploadProgressFill"></div>
+          </div>
+          <span class="upload-progress-percent" id="uploadProgressPercent">0%</span>
+        </div>
         
-        notifyClients({
-          type: 'SYNC_SUCCESS',
-          data: { type: 'report', id: report.id }
-        });
-      } catch (error) {
-        console.error('[SW] Failed to sync report:', error);
-      }
-    }
-  } catch (error) {
-    console.error('[SW] Background sync failed:', error);
-  }
-}
-
-/**
- * Sync pending guides to Firebase
- */
-async function syncPendingGuides() {
-  try {
-    const pendingGuides = await getPendingData('pending-guides');
-    
-    for (const guide of pendingGuides) {
-      try {
-        console.log('[SW] Syncing guide:', guide.id);
-        await removePendingData('pending-guides', guide.id);
+        <div class="upload-progress-stages" id="uploadProgressStages">
+          <!-- Stages will be inserted here -->
+        </div>
         
-        notifyClients({
-          type: 'SYNC_SUCCESS',
-          data: { type: 'guide', id: guide.id }
-        });
-      } catch (error) {
-        console.error('[SW] Failed to sync guide:', error);
+        <div class="upload-progress-status" id="uploadProgressStatus">
+          Preparing...
+        </div>
+      </div>
+    `;
+
+    // Add styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .upload-progress-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10010;
+        align-items: center;
+        justify-content: center;
       }
-    }
-  } catch (error) {
-    console.error('[SW] Background sync failed:', error);
-  }
-}
-
-// ==================== IndexedDB Helpers ====================
-
-async function getPendingData(storeName) {
-  // This would use IndexedDB - simplified placeholder
-  return [];
-}
-
-async function removePendingData(storeName, id) {
-  // This would remove from IndexedDB - simplified placeholder
-  return true;
-}
-
-// ==================== Client Communication ====================
-
-async function notifyClients(message) {
-  const clients = await self.clients.matchAll({ type: 'window' });
-  
-  clients.forEach(client => {
-    client.postMessage(message);
-  });
-}
-
-// ==================== Push Notifications ====================
-
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push notification received');
-  
-  const options = {
-    icon: '/assets/icons/icon-192x192.png',
-    badge: '/assets/icons/badge-72x72.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
-    actions: [
-      { action: 'view', title: 'View', icon: '/assets/icons/check.png' },
-      { action: 'dismiss', title: 'Dismiss', icon: '/assets/icons/close.png' }
-    ]
-  };
-  
-  let data = { title: 'Access Nature', body: 'New update available' };
-  
-  try {
-    data = event.data?.json() || data;
-  } catch (e) {
-    data.body = event.data?.text() || data.body;
-  }
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      ...options
-    })
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event.action);
-  
-  event.notification.close();
-  
-  if (event.action === 'view') {
-    event.waitUntil(
-      self.clients.openWindow('/')
-    );
-  }
-});
-
-// ==================== Message Handler ====================
-
-self.addEventListener('message', (event) => {
-  const { type, payload } = event.data || {};
-  
-  // Only log relevant app messages, not Firebase internal messages (ping, keyChanged, etc.)
-  if (type && !['ping', 'keyChanged'].includes(event.data?.eventType)) {
-    console.log('[SW] Message received:', type);
-  }
-  
-  switch (type) {
-    case 'SKIP_WAITING':
-      self.skipWaiting();
-      break;
       
-    case 'CACHE_URLS':
-      event.waitUntil(cacheUrls(payload.urls, payload.cacheName || APP_CACHE));
-      break;
-      
-    case 'CACHE_MAP_REGION':
-      event.waitUntil(cacheMapRegion(payload));
-      break;
-      
-    case 'CLEAR_CACHE':
-      event.waitUntil(clearCache(payload.cacheName));
-      break;
-      
-    case 'GET_CACHE_SIZE':
-      event.waitUntil(getCacheSize().then(size => {
-        event.ports[0]?.postMessage({ size });
-      }));
-      break;
-  }
-});
-
-/**
- * Cache specific URLs on demand
- */
-async function cacheUrls(urls, cacheName) {
-  const cache = await caches.open(cacheName);
-  
-  for (const url of urls) {
-    try {
-      await cache.add(url);
-      console.log('[SW] Cached:', url);
-    } catch (error) {
-      console.warn('[SW] Failed to cache:', url, error);
-    }
-  }
-}
-
-/**
- * Cache map tiles for a region
- */
-async function cacheMapRegion({ bounds, zoom, maxZoom = 16 }) {
-  const cache = await caches.open(MAP_CACHE);
-  const tiles = generateTileUrls(bounds, zoom, maxZoom);
-  
-  let cached = 0;
-  const total = tiles.length;
-  
-  for (const tileUrl of tiles) {
-    try {
-      const response = await fetch(tileUrl);
-      if (response.ok) {
-        await cache.put(tileUrl, response);
-        cached++;
+      .upload-progress-modal.visible {
+        display: flex;
       }
-    } catch (error) {
-      // Continue with other tiles
+      
+      .upload-progress-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+      }
+      
+      .upload-progress-content {
+        position: relative;
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        width: 90%;
+        max-width: 380px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: uploadModalIn 0.3s ease-out;
+      }
+      
+      @keyframes uploadModalIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9) translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+      
+      .upload-progress-header {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      
+      .upload-progress-icon {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .upload-cloud-icon {
+        width: 48px;
+        height: 48px;
+        color: #2e7d32;
+        animation: uploadBounce 1s ease-in-out infinite;
+      }
+      
+      @keyframes uploadBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      
+      .upload-pulse {
+        position: absolute;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: rgba(46, 125, 50, 0.2);
+        animation: uploadPulse 1.5s ease-out infinite;
+      }
+      
+      @keyframes uploadPulse {
+        0% {
+          transform: scale(0.8);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1.5);
+          opacity: 0;
+        }
+      }
+      
+      .upload-progress-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0;
+      }
+      
+      .upload-progress-bar-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      
+      .upload-progress-bar {
+        flex: 1;
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      
+      .upload-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #2e7d32, #4caf50);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+      
+      .upload-progress-percent {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2e7d32;
+        min-width: 45px;
+        text-align: right;
+      }
+      
+      .upload-progress-stages {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      
+      .upload-stage {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: #f5f5f5;
+        font-size: 0.9rem;
+        color: #666;
+        transition: all 0.3s ease;
+      }
+      
+      .upload-stage.active {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+      
+      .upload-stage.completed {
+        background: #e8f5e9;
+        color: #1b5e20;
+      }
+      
+      .upload-stage.error {
+        background: #ffebee;
+        color: #c62828;
+      }
+      
+      .upload-stage-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      
+      .upload-stage.active .upload-stage-icon {
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      .upload-stage-text {
+        flex: 1;
+      }
+      
+      .upload-stage-detail {
+        font-size: 0.8rem;
+        opacity: 0.7;
+      }
+      
+      .upload-progress-status {
+        text-align: center;
+        font-size: 0.85rem;
+        color: #666;
+        padding: 12px;
+        background: #fafafa;
+        border-radius: 8px;
+      }
+      
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        .upload-progress-content {
+          background: #1e1e1e;
+        }
+        
+        .upload-progress-title {
+          color: #ffffff;
+        }
+        
+        .upload-progress-bar {
+          background: #333;
+        }
+        
+        .upload-stage {
+          background: #2a2a2a;
+          color: #aaa;
+        }
+        
+        .upload-stage.active,
+        .upload-stage.completed {
+          background: rgba(46, 125, 50, 0.2);
+        }
+        
+        .upload-progress-status {
+          background: #2a2a2a;
+          color: #aaa;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+    document.body.appendChild(this.modal);
+  }
+
+  /**
+   * Show the modal with initial stages
+   * @param {string} title - Modal title
+   * @param {Array} stages - Array of {id, label} objects
+   */
+  show(title = 'Uploading to Cloud', stages = []) {
+    this.createModal();
+    
+    this.stages = stages;
+    this.currentStage = 0;
+    this.currentProgress = 0;
+    
+    // Update title
+    const titleEl = this.modal.querySelector('.upload-progress-title');
+    if (titleEl) titleEl.textContent = title;
+    
+    // Render stages
+    const stagesEl = document.getElementById('uploadProgressStages');
+    if (stagesEl) {
+      stagesEl.innerHTML = stages.map((stage, index) => `
+        <div class="upload-stage" id="uploadStage-${stage.id}" data-index="${index}">
+          <span class="upload-stage-icon">○</span>
+          <span class="upload-stage-text">${stage.label}</span>
+          <span class="upload-stage-detail" id="uploadStageDetail-${stage.id}"></span>
+        </div>
+      `).join('');
     }
     
-    // Notify progress
-    if (cached % 10 === 0) {
-      notifyClients({
-        type: 'MAP_CACHE_PROGRESS',
-        data: { cached, total }
-      });
-    }
-  }
-  
-  notifyClients({
-    type: 'MAP_CACHE_COMPLETE',
-    data: { cached, total }
-  });
-}
-
-/**
- * Generate tile URLs for a bounding box
- */
-function generateTileUrls(bounds, minZoom, maxZoom) {
-  const urls = [];
-  const tileServer = 'https://a.tile.openstreetmap.org';
-  
-  for (let z = minZoom; z <= maxZoom; z++) {
-    const minTile = latLngToTile(bounds.north, bounds.west, z);
-    const maxTile = latLngToTile(bounds.south, bounds.east, z);
+    // Reset progress
+    this.setProgress(0);
+    this.setStatus('Preparing...');
     
-    for (let x = minTile.x; x <= maxTile.x; x++) {
-      for (let y = minTile.y; y <= maxTile.y; y++) {
-        urls.push(`${tileServer}/${z}/${x}/${y}.png`);
+    // Show modal
+    this.modal.classList.add('visible');
+    this.isVisible = true;
+  }
+
+  /**
+   * Hide the modal
+   * @param {number} delay - Delay in ms before hiding
+   */
+  hide(delay = 0) {
+    setTimeout(() => {
+      if (this.modal) {
+        this.modal.classList.remove('visible');
+        this.isVisible = false;
       }
-    }
+    }, delay);
   }
-  
-  return urls;
-}
 
-/**
- * Convert lat/lng to tile coordinates
- */
-function latLngToTile(lat, lng, zoom) {
-  const n = Math.pow(2, zoom);
-  const x = Math.floor((lng + 180) / 360 * n);
-  const latRad = lat * Math.PI / 180;
-  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
-  return { x, y };
-}
-
-/**
- * Clear specific cache
- */
-async function clearCache(cacheName) {
-  if (cacheName) {
-    await caches.delete(cacheName);
-  } else {
-    // Clear all caches
-    const names = await caches.keys();
-    await Promise.all(names.map(name => caches.delete(name)));
-  }
-}
-
-/**
- * Get total cache size
- */
-async function getCacheSize() {
-  let totalSize = 0;
-  const cacheNames = await caches.keys();
-  
-  for (const name of cacheNames) {
-    const cache = await caches.open(name);
-    const keys = await cache.keys();
+  /**
+   * Set overall progress
+   * @param {number} percent - 0-100
+   */
+  setProgress(percent) {
+    this.currentProgress = Math.min(100, Math.max(0, percent));
     
-    for (const request of keys) {
-      const response = await cache.match(request);
-      if (response) {
-        const blob = await response.blob();
-        totalSize += blob.size;
-      }
+    const fillEl = document.getElementById('uploadProgressFill');
+    const percentEl = document.getElementById('uploadProgressPercent');
+    
+    if (fillEl) fillEl.style.width = `${this.currentProgress}%`;
+    if (percentEl) percentEl.textContent = `${Math.round(this.currentProgress)}%`;
+  }
+
+  /**
+   * Set status text
+   * @param {string} text - Status message
+   */
+  setStatus(text) {
+    const statusEl = document.getElementById('uploadProgressStatus');
+    if (statusEl) statusEl.textContent = text;
+  }
+
+  /**
+   * Mark a stage as active
+   * @param {string} stageId - Stage ID
+   * @param {string} detail - Optional detail text
+   */
+  setStageActive(stageId, detail = '') {
+    const stageEl = document.getElementById(`uploadStage-${stageId}`);
+    if (stageEl) {
+      // Remove active from all stages
+      document.querySelectorAll('.upload-stage').forEach(el => el.classList.remove('active'));
+      
+      stageEl.classList.add('active');
+      stageEl.querySelector('.upload-stage-icon').textContent = '⟳';
+      
+      const detailEl = document.getElementById(`uploadStageDetail-${stageId}`);
+      if (detailEl) detailEl.textContent = detail;
     }
   }
-  
-  return totalSize;
+
+  /**
+   * Mark a stage as completed
+   * @param {string} stageId - Stage ID
+   * @param {string} detail - Optional detail text
+   */
+  setStageCompleted(stageId, detail = '') {
+    const stageEl = document.getElementById(`uploadStage-${stageId}`);
+    if (stageEl) {
+      stageEl.classList.remove('active');
+      stageEl.classList.add('completed');
+      stageEl.querySelector('.upload-stage-icon').textContent = '✓';
+      
+      const detailEl = document.getElementById(`uploadStageDetail-${stageId}`);
+      if (detailEl) detailEl.textContent = detail;
+    }
+  }
+
+  /**
+   * Mark a stage as error
+   * @param {string} stageId - Stage ID
+   * @param {string} detail - Error detail
+   */
+  setStageError(stageId, detail = '') {
+    const stageEl = document.getElementById(`uploadStage-${stageId}`);
+    if (stageEl) {
+      stageEl.classList.remove('active');
+      stageEl.classList.add('error');
+      stageEl.querySelector('.upload-stage-icon').textContent = '✗';
+      
+      const detailEl = document.getElementById(`uploadStageDetail-${stageId}`);
+      if (detailEl) detailEl.textContent = detail;
+    }
+  }
+
+  /**
+   * Update photo upload progress
+   * @param {number} current - Current photo number
+   * @param {number} total - Total photos
+   * @param {number} baseProgress - Base progress percent before photos
+   * @param {number} photoProgressWeight - How much progress photos represent (0-100)
+   */
+  updatePhotoProgress(current, total, baseProgress = 10, photoProgressWeight = 50) {
+    const photoProgress = (current / total) * photoProgressWeight;
+    this.setProgress(baseProgress + photoProgress);
+    this.setStageActive('photos', `${current}/${total}`);
+    this.setStatus(`Uploading photo ${current} of ${total}...`);
+  }
+
+  /**
+   * Show success state
+   * @param {string} message - Success message
+   */
+  showSuccess(message = 'Upload complete!') {
+    this.setProgress(100);
+    this.setStatus(message);
+    
+    // Update icon to checkmark
+    const iconContainer = this.modal.querySelector('.upload-progress-icon');
+    if (iconContainer) {
+      iconContainer.innerHTML = `
+        <svg class="upload-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: none; color: #2e7d32;">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      `;
+    }
+    
+    // Update title
+    const titleEl = this.modal.querySelector('.upload-progress-title');
+    if (titleEl) titleEl.textContent = 'Upload Complete!';
+  }
+
+  /**
+   * Show error state
+   * @param {string} message - Error message
+   */
+  showError(message = 'Upload failed') {
+    this.setStatus(message);
+    
+    // Update icon to error
+    const iconContainer = this.modal.querySelector('.upload-progress-icon');
+    if (iconContainer) {
+      iconContainer.innerHTML = `
+        <svg class="upload-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: none; color: #c62828;">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+      `;
+    }
+    
+    // Update title
+    const titleEl = this.modal.querySelector('.upload-progress-title');
+    if (titleEl) titleEl.textContent = 'Upload Failed';
+  }
 }
 
-console.log('[SW] Service Worker loaded');
+// Export singleton
+export const uploadProgress = new UploadProgressModal();
