@@ -47,6 +47,8 @@ class OfflineSync {
     this.isOnline = navigator.onLine;
     this.syncInProgress = false;
     this.emailJsLoaded = false;
+    this.uploadingRoutes = new Set(); // Track routes currently being uploaded
+    this.uploadingGuides = new Set(); // Track guides currently being uploaded
   }
 
   /**
@@ -249,23 +251,16 @@ class OfflineSync {
       this.isOnline = true;
       console.log('🌐 Connection restored');
       
-      // Check for pending items
+      // Check for pending items - just notify, DON'T auto-sync
       const pendingCount = await this.getPendingCount();
       
       if (pendingCount > 0) {
-        // Show notification with auto-sync option
+        // Show notification - user can choose to sync
         this.showPendingNotification(pendingCount);
-        
-        // Auto-sync after short delay (give network time to stabilize)
-        setTimeout(async () => {
-          if (this.isOnline) {
-            console.log('🔄 Auto-syncing pending uploads...');
-            await this.syncAllPending();
-          }
-        }, 3000);
+        // NO auto-sync - let user decide via notification or Local Storage modal
       }
       
-      // Process email queue
+      // Process email queue (this is safe to auto-run)
       this.processEmailQueue();
     });
 
@@ -275,22 +270,10 @@ class OfflineSync {
       toast.warning('Offline - data will sync when connected');
     });
     
-    // Also check connectivity periodically (some devices don't fire online/offline reliably)
-    setInterval(async () => {
-      const wasOnline = this.isOnline;
+    // Periodic connectivity check (just update status, no auto-sync)
+    setInterval(() => {
       this.isOnline = navigator.onLine;
-      
-      // If we just came back online
-      if (!wasOnline && this.isOnline) {
-        console.log('🌐 Connection detected via polling');
-        const pendingCount = await this.getPendingCount();
-        if (pendingCount > 0) {
-          this.showPendingNotification(pendingCount);
-          await this.syncAllPending();
-        }
-        this.processEmailQueue();
-      }
-    }, 30000); // Check every 30 seconds
+    }, 30000);
   }
 
   // ==================== Save Methods ====================
@@ -1145,6 +1128,15 @@ class OfflineSync {
 
       // Upload pending routes
       for (const route of pendingRoutes) {
+        // Skip if already being uploaded
+        if (this.uploadingRoutes.has(route.localId)) {
+          console.log(`⚠️ Skipping route ${route.localId} - already being uploaded`);
+          continue;
+        }
+        
+        // Mark as uploading
+        this.uploadingRoutes.add(route.localId);
+        
         try {
           const cloudId = await this.uploadRouteToCloud(route.data, user);
           await this.markRouteUploaded(route.localId, cloudId);
@@ -1155,11 +1147,22 @@ class OfflineSync {
           failCount++;
           // Increment retry count
           await this.incrementRetryCount('pending_routes', route.localId);
+        } finally {
+          this.uploadingRoutes.delete(route.localId);
         }
       }
 
       // Upload pending guides
       for (const guide of pendingGuides) {
+        // Skip if already being uploaded
+        if (this.uploadingGuides.has(guide.localId)) {
+          console.log(`⚠️ Skipping guide ${guide.localId} - already being uploaded`);
+          continue;
+        }
+        
+        // Mark as uploading
+        this.uploadingGuides.add(guide.localId);
+        
         try {
           const cloudId = await this.uploadGuideToCloud(guide.data, user);
           await this.markGuideUploaded(guide.localId, cloudId);
@@ -1170,6 +1173,8 @@ class OfflineSync {
           failCount++;
           // Increment retry count
           await this.incrementRetryCount('pending_guides', guide.localId);
+        } finally {
+          this.uploadingGuides.delete(guide.localId);
         }
       }
 
@@ -1218,20 +1223,37 @@ class OfflineSync {
   }
 
   async uploadSingleRoute(localId) {
+    // Prevent duplicate uploads of the same route
+    if (this.uploadingRoutes.has(localId)) {
+      console.log(`⚠️ Route ${localId} is already being uploaded`);
+      toast.info('Upload already in progress...');
+      return;
+    }
+    
+    // Check if already uploaded
+    const routes = await this.getPendingRoutes();
+    const route = routes.find(r => r.localId === localId);
+    
+    if (!route) {
+      toast.error('Route not found');
+      return;
+    }
+    
+    if (route.status === 'uploaded') {
+      console.log(`⚠️ Route ${localId} already uploaded`);
+      toast.info('This route has already been uploaded');
+      return;
+    }
+    
+    // Mark as uploading
+    this.uploadingRoutes.add(localId);
+    
     try {
       const { auth } = await import('../../firebase-setup.js');
       const user = auth.currentUser;
       
       if (!user) {
         toast.error('Please sign in to upload');
-        return;
-      }
-
-      const routes = await this.getPendingRoutes();
-      const route = routes.find(r => r.localId === localId);
-      
-      if (!route) {
-        toast.error('Route not found');
         return;
       }
 
@@ -1250,11 +1272,20 @@ class OfflineSync {
       ];
       
       // Show progress modal
-      uploadProgress.show('Uploading to Cloud', stages);
-      uploadProgress.setStageActive('prepare');
-      uploadProgress.setProgress(5);
+      console.log('📊 Showing upload progress modal...', { uploadProgress, stages });
+      if (uploadProgress && typeof uploadProgress.show === 'function') {
+        uploadProgress.show('Uploading to Cloud', stages);
+        uploadProgress.setStageActive('prepare');
+        uploadProgress.setProgress(5);
+      } else {
+        console.warn('⚠️ uploadProgress not available, falling back to toast');
+        toast.info('Uploading route...');
+      }
       
       const cloudId = await this.uploadRouteToCloud(route.data, user, (stage, detail, progress) => {
+        // Only call uploadProgress methods if available
+        if (!uploadProgress || typeof uploadProgress.setStageCompleted !== 'function') return;
+        
         if (stage === 'prepare-done') {
           uploadProgress.setStageCompleted('prepare');
           uploadProgress.setProgress(progress);
@@ -1282,9 +1313,13 @@ class OfflineSync {
       await this.markRouteUploaded(localId, cloudId);
       
       // Show success
-      uploadProgress.setProgress(100);
-      uploadProgress.showSuccess(`"${routeName}" uploaded successfully!`);
-      uploadProgress.hide(2000);
+      if (uploadProgress && typeof uploadProgress.setProgress === 'function') {
+        uploadProgress.setProgress(100);
+        uploadProgress.showSuccess(`"${routeName}" uploaded successfully!`);
+        uploadProgress.hide(2000);
+      } else {
+        toast.success(`"${routeName}" uploaded! ☁️`);
+      }
       
       // Refresh modal after delay
       setTimeout(() => {
@@ -1294,13 +1329,43 @@ class OfflineSync {
       
     } catch (error) {
       console.error('Upload failed:', error);
-      uploadProgress.showError(error.message || 'Upload failed');
-      uploadProgress.hide(3000);
+      if (uploadProgress && typeof uploadProgress.showError === 'function') {
+        uploadProgress.showError(error.message || 'Upload failed');
+        uploadProgress.hide(3000);
+      }
       toast.error('Upload failed: ' + (error.message || 'Unknown error'));
+    } finally {
+      // Always clear the uploading flag
+      this.uploadingRoutes.delete(localId);
     }
   }
 
   async uploadSingleGuide(localId) {
+    // Prevent duplicate uploads of the same guide
+    if (this.uploadingGuides.has(localId)) {
+      console.log(`⚠️ Guide ${localId} is already being uploaded`);
+      toast.info('Upload already in progress...');
+      return;
+    }
+    
+    // Check if already uploaded
+    const guides = await this.getPendingGuides();
+    const guide = guides.find(g => g.localId === localId);
+    
+    if (!guide) {
+      toast.error('Guide not found');
+      return;
+    }
+    
+    if (guide.status === 'uploaded') {
+      console.log(`⚠️ Guide ${localId} already uploaded`);
+      toast.info('This guide has already been uploaded');
+      return;
+    }
+    
+    // Mark as uploading
+    this.uploadingGuides.add(localId);
+    
     try {
       const { auth } = await import('../../firebase-setup.js');
       const user = auth.currentUser;
@@ -1310,15 +1375,7 @@ class OfflineSync {
         return;
       }
 
-      const guides = await this.getPendingGuides();
-      const guide = guides.find(g => g.localId === localId);
-      
-      if (!guide) {
-        toast.error('Guide not found');
-        return;
-      }
-
-      toast.info('Uploading...');
+      toast.info('Uploading guide...');
       const cloudId = await this.uploadGuideToCloud(guide.data, user);
       await this.markGuideUploaded(localId, cloudId);
       toast.success('Trail guide uploaded! ☁️');
@@ -1330,6 +1387,9 @@ class OfflineSync {
     } catch (error) {
       console.error('Upload failed:', error);
       toast.error('Upload failed');
+    } finally {
+      // Always clear the uploading flag
+      this.uploadingGuides.delete(localId);
     }
   }
 
