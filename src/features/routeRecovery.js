@@ -17,6 +17,7 @@
 
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
+import { storageService } from '../services/storageService.js';
 
 class RouteRecovery {
   constructor() {
@@ -612,7 +613,7 @@ class RouteRecovery {
     }
     
     this.showProgress(true);
-    this.setProgress(10);
+    this.setProgress(5);
     
     try {
       // Check auth
@@ -627,7 +628,25 @@ class RouteRecovery {
       }
       
       this.addLog('Starting upload...', 'info');
-      this.setProgress(30);
+      this.setProgress(10);
+      
+      // Upload photos to Storage if needed
+      this.addLog('Preparing route data...', 'info');
+      
+      const { routeData: processedRouteData, routeId, photosUploaded } = await storageService.prepareRouteForSave(
+        this.currentData.routeData,
+        user.uid,
+        (current, total) => {
+          this.addLog(`Uploading photo ${current}/${total}...`, 'info');
+          this.setProgress(10 + (current / total) * 50);
+        }
+      );
+      
+      if (photosUploaded > 0) {
+        this.addLog(`✅ ${photosUploaded} photos uploaded to Storage`, 'success');
+      }
+      
+      this.setProgress(65);
       
       const { collection, addDoc, serverTimestamp } = await import(
         'https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js'
@@ -644,12 +663,14 @@ class RouteRecovery {
         totalDistance: this.currentData.routeInfo.totalDistance || 0,
         elapsedTime: this.currentData.routeInfo.elapsedTime || 0,
         originalDate: this.currentData.routeInfo.date,
-        routeData: this.currentData.routeData,
+        routeData: processedRouteData,
+        storageRouteId: routeId || null,
         stats: {
           locationPoints: this.currentData.stats.locationPoints,
           photos: this.currentData.stats.photos,
           notes: this.currentData.stats.notes,
-          totalDataPoints: this.currentData.routeData.length
+          totalDataPoints: processedRouteData.length,
+          photosInStorage: photosUploaded
         },
         accessibilityData: this.currentData.accessibilityData,
         deviceInfo: {
@@ -660,7 +681,15 @@ class RouteRecovery {
         }
       };
       
-      this.setProgress(60);
+      // Final size check
+      const finalSize = JSON.stringify(routeDoc).length;
+      this.addLog(`Document size: ${Math.round(finalSize/1024)} KB`, 'info');
+      
+      if (finalSize > 1000000) {
+        throw new Error(`Document too large (${Math.round(finalSize/1024)} KB). Please reduce photos.`);
+      }
+      
+      this.setProgress(80);
       
       // Upload to Firestore
       const docRef = await addDoc(collection(db, 'routes'), routeDoc);

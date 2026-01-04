@@ -3,6 +3,7 @@ import { auth, db, storage } from '../../firebase-setup.js';
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { userService } from '../services/userService.js';
+import { storageService } from '../services/storageService.js';
 import { trailGuideGeneratorV2 } from './trailGuideGeneratorV2.js';
 import {
   signInWithEmailAndPassword,
@@ -712,58 +713,17 @@ async saveCurrentRouteToCloud() {
       console.warn('Could not load accessibility data:', error);
     }
 
-    // Check data size and handle photos if too large
-    let processedRouteData = [...routeDataToSave];
-    const photos = routeDataToSave.filter(p => p.type === 'photo' && p.content);
-    const estimatedSize = JSON.stringify(routeDataToSave).length;
-    
-    console.log(`📊 Route data size: ${Math.round(estimatedSize/1024)} KB, Photos: ${photos.length}`);
-    
-    // If data is large or has multiple photos, upload photos to Storage
-    if (estimatedSize > 700000 || photos.length > 2) {
-      console.log('📸 Route has large photo data, uploading to Firebase Storage...');
-      this.showCloudSyncIndicator('Uploading photos...');
-      
-      const routeId = `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        
-        try {
-          this.showCloudSyncIndicator(`Uploading photo ${i + 1}/${photos.length}...`);
-          
-          // Compress photo first
-          const compressed = await this.compressImageForUpload(photo.content, 800, 0.6);
-          
-          // Upload to Storage
-          const photoRef = ref(storage, `routes/${this.currentUser.uid}/${routeId}/photo_${i}.jpg`);
-          const blob = this.base64ToBlob(compressed);
-          
-          console.log(`📤 Uploading photo ${i + 1} (${Math.round(blob.size/1024)} KB)...`);
-          await uploadBytes(photoRef, blob);
-          const downloadURL = await getDownloadURL(photoRef);
-          
-          // Replace base64 with URL in route data
-          const photoIndex = processedRouteData.findIndex(p => 
-            p.type === 'photo' && p.timestamp === photo.timestamp
-          );
-          
-          if (photoIndex !== -1) {
-            processedRouteData[photoIndex] = {
-              ...processedRouteData[photoIndex],
-              content: downloadURL,
-              storageRef: `routes/${this.currentUser.uid}/${routeId}/photo_${i}.jpg`,
-              isStorageURL: true
-            };
-          }
-          
-          console.log(`✅ Photo ${i + 1} uploaded to Storage`);
-          
-        } catch (photoError) {
-          console.warn(`⚠️ Failed to upload photo ${i + 1}:`, photoError.message);
-          // Continue with other photos, keep original base64 for this one
-        }
+    // Use storageService to upload photos to Storage if needed
+    const { routeData: processedRouteData, routeId, photosUploaded } = await storageService.prepareRouteForSave(
+      routeDataToSave,
+      this.currentUser.uid,
+      (current, total) => {
+        this.showCloudSyncIndicator(`Uploading photo ${current}/${total}...`);
       }
+    );
+    
+    if (photosUploaded > 0) {
+      console.log(`📸 Uploaded ${photosUploaded} photos to Storage`);
     }
 
     // Prepare route document for Firestore
@@ -779,15 +739,19 @@ async saveCurrentRouteToCloud() {
       elapsedTime: routeInfo.elapsedTime || 0,
       originalDate: routeInfo.date,
       
-      // Route data (with photos as URLs if uploaded to Storage)
+      // Route data (with photos as Storage URLs)
       routeData: processedRouteData,
+      
+      // Storage reference if photos were uploaded
+      storageRouteId: routeId || null,
       
       // Statistics for quick access
       stats: {
         locationPoints: processedRouteData.filter(p => p.type === 'location').length,
         photos: processedRouteData.filter(p => p.type === 'photo').length,
         notes: processedRouteData.filter(p => p.type === 'text').length,
-        totalDataPoints: processedRouteData.length
+        totalDataPoints: processedRouteData.length,
+        photosInStorage: photosUploaded
       },
       
       // Accessibility information

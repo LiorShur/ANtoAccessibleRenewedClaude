@@ -12,6 +12,7 @@
 
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
+import { storageService } from '../services/storageService.js';
 
 // Settings storage key (shared with admin.html)
 const SETTINGS_KEY = 'accessNature_adminSettings';
@@ -528,61 +529,80 @@ class OfflineSync {
         actualRouteData = routeData.routeData;
         routeInfo = routeData.routeInfo;
         accessibilityData = routeData.accessibilityData;
-        
-        docData = {
-          userId: user.uid,
-          userEmail: user.email,
-          userDisplayName: user.displayName || 'Anonymous',
-          routeName: routeInfo.name || routeData.name,
-          createdAt: serverTimestamp(),
-          uploadedAt: new Date().toISOString(),
-          
-          // Route statistics
-          totalDistance: routeInfo.totalDistance || routeData.totalDistance || 0,
-          elapsedTime: routeInfo.elapsedTime || routeData.elapsedTime || 0,
-          originalDate: routeInfo.date,
-          
-          // Route data
-          routeData: actualRouteData,
-          
-          // Statistics for quick access
-          stats: {
-            locationPoints: actualRouteData.filter(p => p.type === 'location').length,
-            photos: actualRouteData.filter(p => p.type === 'photo').length,
-            notes: actualRouteData.filter(p => p.type === 'text').length,
-            totalDataPoints: actualRouteData.length
-          },
-          
-          // Accessibility information
-          accessibilityData: accessibilityData,
-          
-          // Technical info
-          deviceInfo: {
-            userAgent: navigator.userAgent,
-            timestamp: Date.now(),
-            appVersion: '1.0'
-          }
-        };
       } else {
         // Old format - spread as-is
-        docData = {
-          ...routeData,
-          userId: user.uid,
-          userDisplayName: user.displayName || 'Anonymous',
-          createdAt: serverTimestamp()
-        };
         actualRouteData = routeData.routeData || routeData.data || [];
         routeInfo = { name: routeData.name || 'Untitled Route' };
         accessibilityData = routeData.accessibilityData;
       }
+      
+      // Upload photos to Storage if needed
+      let processedRouteData = actualRouteData;
+      let storageRouteId = null;
+      let photosUploaded = 0;
+      
+      const sizeInfo = storageService.calculateRouteSize(actualRouteData);
+      if (sizeInfo.needsStorage) {
+        console.log('📸 Uploading photos to Storage...');
+        const result = await storageService.uploadRoutePhotos(
+          actualRouteData,
+          user.uid,
+          null,
+          (current, total) => {
+            console.log(`Uploading photo ${current}/${total}...`);
+          }
+        );
+        processedRouteData = result.routeData;
+        storageRouteId = result.routeId;
+        photosUploaded = result.photosUploaded;
+      }
+      
+      docData = {
+        userId: user.uid,
+        userEmail: user.email,
+        userDisplayName: user.displayName || 'Anonymous',
+        routeName: routeInfo.name || routeData.name,
+        createdAt: serverTimestamp(),
+        uploadedAt: new Date().toISOString(),
+        
+        // Route statistics
+        totalDistance: routeInfo.totalDistance || routeData.totalDistance || 0,
+        elapsedTime: routeInfo.elapsedTime || routeData.elapsedTime || 0,
+        originalDate: routeInfo.date,
+        
+        // Route data (with photos as Storage URLs if uploaded)
+        routeData: processedRouteData,
+        
+        // Storage reference
+        storageRouteId: storageRouteId,
+        
+        // Statistics for quick access
+        stats: {
+          locationPoints: processedRouteData.filter(p => p.type === 'location').length,
+          photos: processedRouteData.filter(p => p.type === 'photo').length,
+          notes: processedRouteData.filter(p => p.type === 'text').length,
+          totalDataPoints: processedRouteData.length,
+          photosInStorage: photosUploaded
+        },
+        
+        // Accessibility information
+        accessibilityData: accessibilityData,
+        
+        // Technical info
+        deviceInfo: {
+          userAgent: navigator.userAgent,
+          timestamp: Date.now(),
+          appVersion: '1.0'
+        }
+      };
 
       const docRef = await addDoc(collection(db, 'routes'), docData);
       console.log('☁️ Route uploaded to cloud:', docRef.id);
       
       // Generate trail guide for this route
-      if (actualRouteData && actualRouteData.length > 0) {
+      if (processedRouteData && processedRouteData.length > 0) {
         try {
-          await this.generateAndUploadTrailGuide(docRef.id, actualRouteData, routeInfo, accessibilityData, user);
+          await this.generateAndUploadTrailGuide(docRef.id, processedRouteData, routeInfo, accessibilityData, user);
         } catch (guideError) {
           console.warn('Trail guide generation failed:', guideError);
           // Don't throw - route was saved successfully
