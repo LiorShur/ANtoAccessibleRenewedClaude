@@ -18,6 +18,7 @@
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { storageService } from '../services/storageService.js';
+import { uploadProgress } from '../ui/uploadProgress.js';
 
 class RouteRecovery {
   constructor() {
@@ -762,8 +763,7 @@ class RouteRecovery {
         userDisplayName: user.displayName || 'Anonymous',
         title: this.currentData.routeInfo.name,
         routeName: this.currentData.routeInfo.name,
-        html: html,
-        createdAt: serverTimestamp(),
+        htmlContent: html,  // Changed from 'html' to match query expectations
         generatedAt: new Date().toISOString(),
         isPublic: true,  // IMPORTANT: Set to true so it appears in listings
         accessibilityData: this.currentData.accessibilityData || {},
