@@ -3,6 +3,7 @@ import { haversineDistance } from '../utils/calculations.js';
 import { toast } from '../utils/toast.js';
 import { modal } from '../utils/modal.js';
 import { userService } from '../services/userService.js';
+import { storageService } from '../services/storageService.js';
 import { trailGuideGeneratorV2 } from '../features/trailGuideGeneratorV2.js';
 import { getElevation } from '../utils/geolocation.js';
 
@@ -998,6 +999,21 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
       throw new Error('User not authenticated');
     }
     
+    // Upload photos to Storage if needed
+    toast.info('Preparing route data...', { duration: 2000 });
+    
+    const { routeData: processedRouteData, routeId, photosUploaded } = await storageService.prepareRouteForSave(
+      routeData,
+      user.uid,
+      (current, total) => {
+        toast.info(`Uploading photo ${current}/${total}...`, { duration: 1500 });
+      }
+    );
+    
+    if (photosUploaded > 0) {
+      console.log(`📸 Uploaded ${photosUploaded} photos to Storage`);
+    }
+    
     // Prepare route document for Firestore
     const routeDoc = {
       userId: user.uid,
@@ -1011,15 +1027,19 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
       elapsedTime: routeInfo.elapsedTime || 0,
       originalDate: routeInfo.date,
       
-      // Route data
-      routeData: routeData,
+      // Route data (with photos as Storage URLs)
+      routeData: processedRouteData,
+      
+      // Storage reference if photos were uploaded
+      storageRouteId: routeId || null,
       
       // Statistics for quick access
       stats: {
-        locationPoints: routeData.filter(p => p.type === 'location').length,
-        photos: routeData.filter(p => p.type === 'photo').length,
-        notes: routeData.filter(p => p.type === 'text').length,
-        totalDataPoints: routeData.length
+        locationPoints: processedRouteData.filter(p => p.type === 'location').length,
+        photos: processedRouteData.filter(p => p.type === 'photo').length,
+        notes: processedRouteData.filter(p => p.type === 'text').length,
+        totalDataPoints: processedRouteData.length,
+        photosInStorage: photosUploaded
       },
       
       // Accessibility information
@@ -1033,7 +1053,16 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
       }
     };
 
+    // Final size check
+    const finalSize = JSON.stringify(routeDoc).length;
+    console.log(`📊 Final document size: ${Math.round(finalSize/1024)} KB`);
+    
+    if (finalSize > 1000000) {
+      throw new Error(`Route data still too large (${Math.round(finalSize/1024)} KB). Please reduce photo count.`);
+    }
+
     // Save route to cloud with timeout
+    toast.info('Saving to cloud...', { duration: 2000 });
     const savePromise = addDoc(collection(db, 'routes'), routeDoc);
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Cloud save timed out')), 30000)
@@ -1043,7 +1072,7 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
     console.log('✅ Route saved to cloud with ID:', docRef.id);
     
     // Generate trail guide HTML
-    await this.generateTrailGuide(docRef.id, routeData, routeInfo, accessibilityData, authController);
+    await this.generateTrailGuide(docRef.id, processedRouteData, routeInfo, accessibilityData, authController);
     
     this.showSuccessMessage(`✅ "${routeInfo.name}" saved to cloud with trail guide! ☁️`);
     
@@ -1061,6 +1090,8 @@ async saveRouteToCloud(routeData, routeInfo, accessibilityData, authController) 
     
     if (isNetworkError) {
       toast.warning('Network error - route saved locally. Will sync when online.', { duration: 5000 });
+    } else if (error.message.includes('too large')) {
+      toast.error('Route data too large. Try taking fewer photos.', { duration: 5000 });
     }
     
     throw error;
