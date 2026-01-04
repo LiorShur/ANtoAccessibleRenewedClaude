@@ -10,13 +10,13 @@ import {
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-storage.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAmsm916Lzp0MUXANq3SECO4ec7q1H0Vu4",
-  authDomain: "accessnaturebeta-821a2.firebaseapp.com",
-  projectId: "accessnaturebeta-821a2",
-  storageBucket: "accessnaturebeta-821a2.appspot.com",
-  messagingSenderId: "670888101781",
-  appId: "1:670888101781:web:b4cf57f58e86182466589c",
-  measurementId: "G-QL82J92CP7"
+  apiKey: "AIzaSyCTjQP6uun03RQxhS8Iqy_AcqwrXl47LEE",
+  authDomain: "accessible-76181.firebaseapp.com",
+  projectId: "accessible-76181",
+  storageBucket: "accessible-76181.firebasestorage.app",
+  messagingSenderId: "41577077348",
+  appId: "1:41577077348:web:c7a91c89f552a9f7169d71",
+  measurementId: "G-99QRHT5XBH"
 };
 
 // Initialize app - check if already exists
