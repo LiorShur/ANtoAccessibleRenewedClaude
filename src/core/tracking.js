@@ -797,26 +797,32 @@ async saveRoute(skipSurveyPrompt = false) {
     // Save to local storage first (for route history)
     const savedSession = await this.appState.saveSession(routeName);
     
-    // ALSO save to offlineSync's pending system for cloud sync later
-    // This ensures the route appears in "Local Storage" modal and can be uploaded
-    const pendingData = {
-      routeData: routeData,
-      routeInfo: routeInfo,
-      accessibilityData: accessibilityData,
-      name: routeName,
-      totalDistance: routeInfo.totalDistance,
-      elapsedTime: routeInfo.elapsedTime
-    };
-    
-    // Import and use offlineSync
-    const { offlineSync } = await import('../features/offlineSync.js');
-    await offlineSync.saveRoute(pendingData, null); // Save without user - will be linked on upload
-    
-    console.log('✅ Route saved to both local storage and pending queue');
-    
-    // Check if user is logged in and offer cloud save
+    // Check if user is logged in
     const app = window.AccessNatureApp;
     const authController = app?.getController('auth');
+    const isOnlineAndAuthenticated = navigator.onLine && authController?.isAuthenticated();
+    
+    // Import offlineSync
+    const { offlineSync } = await import('../features/offlineSync.js');
+    
+    // Only save to pending queue if offline or not authenticated
+    // This prevents duplicates when user saves to cloud directly
+    let pendingLocalId = null;
+    
+    if (!isOnlineAndAuthenticated) {
+      const pendingData = {
+        routeData: routeData,
+        routeInfo: routeInfo,
+        accessibilityData: accessibilityData,
+        name: routeName,
+        totalDistance: routeInfo.totalDistance,
+        elapsedTime: routeInfo.elapsedTime
+      };
+      
+      const result = await offlineSync.saveRoute(pendingData, null);
+      pendingLocalId = result.localId;
+      console.log('✅ Route saved to pending queue with ID:', pendingLocalId);
+    }
     
     if (authController?.isAuthenticated()) {
       // Ask about cloud save with public/private option
@@ -827,22 +833,49 @@ async saveRoute(skipSurveyPrompt = false) {
           routeInfo.makePublic = cloudChoice === 'public';
           
           // Save to cloud directly
-          await this.saveRouteToCloud(routeData, routeInfo, accessibilityData, authController);
+          const cloudId = await this.saveRouteToCloud(routeData, routeInfo, accessibilityData, authController);
           
-          // Mark as uploaded in pending queue
-          const pendingRoutes = await offlineSync.getPendingRoutes();
-          const justSaved = pendingRoutes.find(r => r.data?.name === routeName && r.status === 'pending');
-          if (justSaved) {
-            await offlineSync.markRouteUploaded(justSaved.localId, 'cloud-synced');
+          // Mark pending as uploaded if it exists
+          if (pendingLocalId) {
+            await offlineSync.markRouteUploaded(pendingLocalId, cloudId);
+            console.log('✅ Pending route marked as uploaded');
           }
           
         } catch (cloudError) {
           console.error('❌ Cloud save failed:', cloudError);
+          
+          // If cloud failed and we didn't save to pending earlier, save now
+          if (!pendingLocalId) {
+            const pendingData = {
+              routeData: routeData,
+              routeInfo: routeInfo,
+              accessibilityData: accessibilityData,
+              name: routeName,
+              totalDistance: routeInfo.totalDistance,
+              elapsedTime: routeInfo.elapsedTime
+            };
+            await offlineSync.saveRoute(pendingData, null);
+          }
+          
           toast.warning('Saved locally! Cloud upload failed - you can retry from Local Storage.', { duration: 6000 });
+        }
+      } else {
+        // User skipped cloud save - save to pending if we haven't already
+        if (!pendingLocalId) {
+          const pendingData = {
+            routeData: routeData,
+            routeInfo: routeInfo,
+            accessibilityData: accessibilityData,
+            name: routeName,
+            totalDistance: routeInfo.totalDistance,
+            elapsedTime: routeInfo.elapsedTime
+          };
+          await offlineSync.saveRoute(pendingData, null);
+          toast.success(`"${routeName}" saved locally!`);
         }
       }
     } else {
-      // User not logged in - route is already saved locally and to pending queue
+      // User not logged in - route is already saved to pending queue
       toast.success(`"${routeName}" saved locally!`);
       
       const wantsToSignIn = await modal.confirm(
