@@ -861,21 +861,106 @@ class OfflineSync {
     const banner = document.createElement('div');
     banner.id = 'pending-sync-banner';
     banner.innerHTML = `
-      <div style="position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); 
-                  background: #059669; color: white; padding: 12px 20px; border-radius: 12px; 
-                  box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10001; 
-                  display: flex; align-items: center; gap: 12px; max-width: 90%;">
-        <span>📦 ${count} item${count !== 1 ? 's' : ''} pending upload</span>
-        <button id="view-pending-btn" style="background: white; color: #059669; border: none; 
-                padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;">
-          View
-        </button>
-        <button id="sync-pending-btn" style="background: rgba(255,255,255,0.2); color: white; border: none; 
-                padding: 6px 14px; border-radius: 6px; font-weight: 600; cursor: pointer;">
-          Sync Now
-        </button>
-        <button id="dismiss-pending-btn" style="background: transparent; color: white; border: none; 
-                font-size: 18px; cursor: pointer; padding: 0 4px;">×</button>
+      <style>
+        #pending-sync-banner .banner-content {
+          position: fixed;
+          bottom: 80px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, #059669 0%, #047857 100%);
+          color: white;
+          padding: 16px 20px;
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+          z-index: 10001;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          width: calc(100% - 32px);
+          max-width: 320px;
+          text-align: center;
+        }
+        #pending-sync-banner .banner-icon {
+          font-size: 32px;
+          margin-bottom: 4px;
+        }
+        #pending-sync-banner .banner-text {
+          font-size: 15px;
+          font-weight: 500;
+          line-height: 1.4;
+        }
+        #pending-sync-banner .banner-buttons {
+          display: flex;
+          gap: 10px;
+          width: 100%;
+          justify-content: center;
+        }
+        #pending-sync-banner .btn-view {
+          flex: 1;
+          max-width: 120px;
+          background: white;
+          color: #059669;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        #pending-sync-banner .btn-view:active {
+          transform: scale(0.96);
+        }
+        #pending-sync-banner .btn-sync {
+          flex: 1;
+          max-width: 120px;
+          background: rgba(255,255,255,0.2);
+          color: white;
+          border: 2px solid rgba(255,255,255,0.4);
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: transform 0.15s, background 0.15s;
+        }
+        #pending-sync-banner .btn-sync:active {
+          transform: scale(0.96);
+          background: rgba(255,255,255,0.3);
+        }
+        #pending-sync-banner .btn-dismiss {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: rgba(255,255,255,0.2);
+          color: white;
+          border: none;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          font-size: 18px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+        }
+        #pending-sync-banner .btn-dismiss:active {
+          background: rgba(255,255,255,0.3);
+        }
+      </style>
+      <div class="banner-content">
+        <button id="dismiss-pending-btn" class="btn-dismiss">×</button>
+        <div class="banner-icon">📦</div>
+        <div class="banner-text">
+          ${count} item${count !== 1 ? 's' : ''} saved locally<br>
+          <span style="opacity: 0.9; font-size: 13px;">Ready to upload to cloud</span>
+        </div>
+        <div class="banner-buttons">
+          <button id="view-pending-btn" class="btn-view">View</button>
+          <button id="sync-pending-btn" class="btn-sync">Sync Now</button>
+        </div>
       </div>
     `;
     
